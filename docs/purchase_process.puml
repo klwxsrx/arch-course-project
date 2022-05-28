@@ -1,0 +1,56 @@
+@startuml
+
+activate Order
+
+Order -> Payment: AuthorizeOrderPayment
+activate Payment
+
+Order <-- Payment: OK
+deactivate Payment
+
+Order -> Warehouse: ReserveOrderItems
+activate Warehouse
+
+Order <-- Warehouse: OK
+deactivate Warehouse
+
+Order -> Delivery: ScheduleDelivery
+activate Delivery
+
+Order <-- Delivery: OK
+deactivate Delivery
+
+Order -> Payment: CompletePaymentTransaction
+activate Payment
+
+alt #lightgreen Успешное подтверждение платежа
+
+Order <-- Payment: OK
+
+else #lightpink Откат операций
+
+Order <-- Payment: ERROR
+deactivate Payment
+
+Order -> Delivery: RemoveDeliverySchedule
+activate Delivery
+
+Order <-- Delivery: OK
+deactivate Delivery
+
+Order -> Warehouse: RemoveOrderItemsReservation
+activate Warehouse
+
+Order <-- Warehouse: OK
+deactivate Warehouse
+
+Order -> Payment: CancelOrderPayment\n(можно не вызывать в случае отклонения платежа)
+activate Payment
+
+Order <-- Payment: OK
+deactivate Payment
+deactivate Order
+
+end
+
+@enduml

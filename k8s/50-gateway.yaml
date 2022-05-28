@@ -1,0 +1,70 @@
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: user-auth
+  namespace: arch-course
+spec:
+  forwardAuth:
+    address: http://auth.arch-course.svc.cluster.local:8080/auth
+    authResponseHeaders:
+      - X-Auth-User-ID
+      - X-Auth-User-Login
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: internal-auth
+  namespace: arch-course
+spec:
+  basicAuth:
+    secret: internal-auth-basic-access
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: arch-course
+  namespace: arch-course
+spec:
+  routes:
+    - kind: Rule
+      match: PathPrefix(`/auth`)
+      services:
+        - name: auth
+          namespace: arch-course
+          port: 8080
+    - kind: Rule
+      match: PathPrefix(`/order`)
+      services:
+        - name: order
+          namespace: arch-course
+          port: 8080
+      middlewares:
+        - name: internal-auth
+          namespace: arch-course
+    - kind: Rule
+      match: PathPrefix(`/payment`)
+      services:
+        - name: payment
+          namespace: arch-course
+          port: 8080
+      middlewares:
+        - name: internal-auth
+          namespace: arch-course
+    - kind: Rule
+      match: PathPrefix(`/warehouse`)
+      services:
+        - name: warehouse
+          namespace: arch-course
+          port: 8080
+      middlewares:
+        - name: internal-auth
+          namespace: arch-course
+    - kind: Rule
+      match: PathPrefix(`/delivery`)
+      services:
+        - name: delivery
+          namespace: arch-course
+          port: 8080
+      middlewares:
+        - name: internal-auth
+          namespace: arch-course

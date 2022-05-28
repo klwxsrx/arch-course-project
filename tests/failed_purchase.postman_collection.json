@@ -1,0 +1,316 @@
+{
+	"info": {
+		"_postman_id": "fe47b20c-32c7-40ac-bd31-18778f3e0b04",
+		"name": "Test Failed Purchase",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "19343365"
+	},
+	"item": [
+		{
+			"name": "Adds items to stock",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"var uuid = require('uuid');",
+							"pm.collectionVariables.set(\"IdempotenceKey\", pm.variables.replaceIn(uuid.v4()));",
+							"",
+							"pm.collectionVariables.set(\"ItemID\", pm.variables.replaceIn(uuid.v4()));"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"10 items added\", function() {",
+							"    pm.response.to.have.status(204);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "PUT",
+				"header": [
+					{
+						"key": "X-Idempotence-Key",
+						"value": "{{IdempotenceKey}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"item_id\": \"{{ItemID}}\",\n    \"quantity\": 10\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://{{baseUrl}}/warehouse/items",
+					"protocol": "http",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"warehouse",
+						"items"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Create order",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"console.log(\"X-Idempotence-Key: \" + pm.request.headers.get(\"X-Idempotence-Key\"))",
+							"",
+							"pm.test(\"Order failed\", function() {",
+							"    pm.response.to.have.status(200);",
+							"    ",
+							"    let result = pm.response.json()",
+							"    pm.expect(result).to.have.property('order_id');",
+							"    pm.collectionVariables.set(\"OrderID\", pm.variables.replaceIn(result.order_id));",
+							"",
+							"    pm.expect(result).to.have.property('success');",
+							"    pm.expect(result.success).to.false;",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"var uuid = require('uuid');",
+							"pm.collectionVariables.set(\"IdempotenceKey\", pm.variables.replaceIn(uuid.v4()));"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "PUT",
+				"header": [
+					{
+						"key": "X-Auth-User-ID",
+						"value": "08f30a90-2fc3-45c5-a2e2-c7d3a96087c5",
+						"type": "text"
+					},
+					{
+						"key": "X-Idempotence-Key",
+						"value": "{{IdempotenceKey}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"address_id\": \"694fdba2-be96-4fb8-acf9-8da2948e8655\",\n    \"items\": [\n        {\n            \"id\": \"{{ItemID}}\",\n            \"item_price\": 100000,\n            \"quantity\": 10\n        }\n    ]\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://{{baseUrl}}/orders",
+					"protocol": "http",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"orders"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get payment info",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Order payment has rejected status\", function() {",
+							"    let result = pm.response.json()",
+							"",
+							"    pm.expect(result).to.have.property('status');",
+							"    pm.expect(result.status).to.eql(\"rejected\");",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://{{baseUrl}}/payment/{{OrderID}}",
+					"protocol": "http",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"payment",
+						"{{OrderID}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get delivery info",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Delivery has cancelled status\", function() {",
+							"    let result = pm.response.json()",
+							"",
+							"    pm.expect(result).to.have.property('status');",
+							"    pm.expect(result.status).to.eql(\"cancelled\");",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"address_id\": \"44555e9e-30b7-4b15-b2b7-d80357133364\"}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://{{baseUrl}}/delivery/{{OrderID}}",
+					"protocol": "http",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"delivery",
+						"{{OrderID}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get available items in stock",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Still has 10 items left in stock\", function() {",
+							"    let result = pm.response.json()",
+							"    pm.expect(result).to.have.lengthOf(1);",
+							"    pm.expect(result[0]).to.have.property('quantity');",
+							"    pm.expect(result[0].quantity).to.eql(10);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "[\"{{ItemID}}\"]",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://{{baseUrl}}/warehouse/items/available",
+					"protocol": "http",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"warehouse",
+						"items",
+						"available"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "arch.homework",
+			"type": "string"
+		},
+		{
+			"key": "IdempotenceKey",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "ItemID",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "OrderID",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "testTotalOrderAmountToFail",
+			"value": "",
+			"type": "string"
+		}
+	]
+}

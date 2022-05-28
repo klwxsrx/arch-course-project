@@ -1,0 +1,285 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: auth
+  namespace: arch-course
+  labels:
+    app: auth
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: auth
+  template:
+    metadata:
+      labels:
+        app: auth
+    spec:
+      containers:
+        - name: auth
+          image: klwxsrx/arch-course-auth-service
+          env:
+            - name: DATABASE_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: auth-config
+                  key: mysql-host
+            - name: DATABASE_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: auth-config
+                  key: mysql-port
+            - name: DATABASE_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: auth-db-access
+                  key: mysql-database
+            - name: DATABASE_USER
+              valueFrom:
+                secretKeyRef:
+                  name: auth-db-access
+                  key: mysql-user
+            - name: DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: auth-db-access
+                  key: mysql-password
+            - name: REDIS_ADDRESS
+              valueFrom:
+                configMapKeyRef:
+                  name: auth-config
+                  key: redis-address
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: auth-redis-access
+                  key: redis-password
+          ports:
+            - name: web
+              containerPort: 8080
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  namespace: arch-course
+  name: order
+  labels:
+    app: order
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: order
+  template:
+    metadata:
+      labels:
+        app: order
+    spec:
+      containers:
+        - name: order
+          image: klwxsrx/arch-course-order-service
+          env:
+            - name: PAYMENT_SERVICE_URL
+              value: http://payment.arch-course.svc.cluster.local:8080
+            - name: WAREHOUSE_SERVICE_URL
+              value: http://warehouse.arch-course.svc.cluster.local:8080
+            - name: DELIVERY_SERVICE_URL
+              value: http://delivery.arch-course.svc.cluster.local:8080
+            - name: DATABASE_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: order-config
+                  key: mysql-host
+            - name: DATABASE_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: order-config
+                  key: mysql-port
+            - name: DATABASE_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: order-db-access
+                  key: mysql-database
+            - name: DATABASE_USER
+              valueFrom:
+                secretKeyRef:
+                  name: order-db-access
+                  key: mysql-user
+            - name: DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: order-db-access
+                  key: mysql-password
+          ports:
+            - name: web
+              containerPort: 8080
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  namespace: arch-course
+  name: payment
+  labels:
+    app: payment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: payment
+  template:
+    metadata:
+      labels:
+        app: payment
+    spec:
+      containers:
+        - name: payment
+          image: klwxsrx/arch-course-payment-service
+          env:
+            - name: DATABASE_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: payment-config
+                  key: mysql-host
+            - name: DATABASE_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: payment-config
+                  key: mysql-port
+            - name: DATABASE_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: payment-db-access
+                  key: mysql-database
+            - name: DATABASE_USER
+              valueFrom:
+                secretKeyRef:
+                  name: payment-db-access
+                  key: mysql-user
+            - name: DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: payment-db-access
+                  key: mysql-password
+          ports:
+            - name: web
+              containerPort: 8080
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  namespace: arch-course
+  name: warehouse
+  labels:
+    app: warehouse
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: warehouse
+  template:
+    metadata:
+      labels:
+        app: warehouse
+    spec:
+      containers:
+        - name: warehouse
+          image: klwxsrx/arch-course-warehouse-service
+          env:
+            - name: DATABASE_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: warehouse-config
+                  key: mysql-host
+            - name: DATABASE_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: warehouse-config
+                  key: mysql-port
+            - name: DATABASE_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: warehouse-db-access
+                  key: mysql-database
+            - name: DATABASE_USER
+              valueFrom:
+                secretKeyRef:
+                  name: warehouse-db-access
+                  key: mysql-user
+            - name: DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: warehouse-db-access
+                  key: mysql-password
+          ports:
+            - name: web
+              containerPort: 8080
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  namespace: arch-course
+  name: delivery
+  labels:
+    app: delivery
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: delivery
+  template:
+    metadata:
+      labels:
+        app: delivery
+    spec:
+      containers:
+        - name: delivery
+          image: klwxsrx/arch-course-delivery-service
+          env:
+            - name: DATABASE_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: delivery-config
+                  key: mysql-host
+            - name: DATABASE_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: delivery-config
+                  key: mysql-port
+            - name: DATABASE_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: delivery-db-access
+                  key: mysql-database
+            - name: DATABASE_USER
+              valueFrom:
+                secretKeyRef:
+                  name: delivery-db-access
+                  key: mysql-user
+            - name: DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: delivery-db-access
+                  key: mysql-password
+          ports:
+            - name: web
+              containerPort: 8080
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080

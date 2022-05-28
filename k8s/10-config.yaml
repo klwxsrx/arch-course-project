@@ -1,0 +1,119 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: internal-auth-basic-access
+  namespace: arch-course
+type: Opaque
+stringData: # user 1234
+  users: user:$apr1$S97l.GlK$Yo1xxblb8xAdFch3cz0JC0
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: auth-config
+  namespace: arch-course
+data:
+  redis-address: arch-course-redis-master:6379
+  mysql-host: arch-course-db-mysql
+  mysql-port: "3306"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: auth-db-access
+  namespace: arch-course
+type: Opaque
+stringData:
+  mysql-database: archcourse
+  mysql-user: user
+  mysql-password: test1234
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: auth-redis-access
+  namespace: arch-course
+type: Opaque
+stringData:
+  redis-password: test1234
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: order-config
+  namespace: arch-course
+data:
+  mysql-host: arch-course-db-mysql
+  mysql-port: "3306"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: order-db-access
+  namespace: arch-course
+type: Opaque
+stringData:
+  mysql-database: archcourse
+  mysql-user: user
+  mysql-password: test1234
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: payment-config
+  namespace: arch-course
+data:
+  mysql-host: arch-course-db-mysql
+  mysql-port: "3306"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: payment-db-access
+  namespace: arch-course
+type: Opaque
+stringData:
+  mysql-database: archcourse
+  mysql-user: user
+  mysql-password: test1234
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: warehouse-config
+  namespace: arch-course
+data:
+  mysql-host: arch-course-db-mysql
+  mysql-port: "3306"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: warehouse-db-access
+  namespace: arch-course
+type: Opaque
+stringData:
+  mysql-database: archcourse
+  mysql-user: user
+  mysql-password: test1234
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: delivery-config
+  namespace: arch-course
+data:
+  mysql-host: arch-course-db-mysql
+  mysql-port: "3306"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: delivery-db-access
+  namespace: arch-course
+type: Opaque
+stringData:
+  mysql-database: archcourse
+  mysql-user: user
+  mysql-password: test1234
