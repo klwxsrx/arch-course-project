@@ -44,7 +44,7 @@ activate Warehouse
 Order <-- Warehouse: OK
 deactivate Warehouse
 
-Order -> Payment: CancelOrderPayment\n(можно не вызывать в случае отклонения платежа)
+Order -> Payment: CancelOrderPayment\n(в случае отклонения платежа\n делать ничего не нужно)
 activate Payment
 
 Order <-- Payment: OK
