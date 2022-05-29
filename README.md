@@ -56,3 +56,8 @@ helm install \
 ```shell
 kubectl apply -f ./k8s
 ```
+
+## Запуск тестов
+```shell
+newman run --env-var="baseUrl=arch.homework" ./full_case.postman_collection.json
+```

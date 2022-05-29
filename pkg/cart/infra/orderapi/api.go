@@ -26,7 +26,7 @@ type createOrderDataSchema struct {
 	Items     []createOrderItemSchema `json:"items"`
 }
 
-func (c *apiClient) CreateOrder(data *api.CreateOrderData) (err error) {
+func (c *apiClient) CreateOrder(data *api.CreateOrderData) (uuid.UUID, error) {
 	itemData := make([]createOrderItemSchema, 0, len(data.Products))
 	for _, item := range data.Products {
 		itemData = append(itemData, createOrderItemSchema{
@@ -43,39 +43,41 @@ func (c *apiClient) CreateOrder(data *api.CreateOrderData) (err error) {
 
 	orderJSON, err := json.Marshal(orderData)
 	if err != nil {
-		return fmt.Errorf("failed to encode order data for request: %w", err)
+		return uuid.UUID{}, fmt.Errorf("failed to encode order data for request: %w", err)
 	}
 
 	url := fmt.Sprintf("%s/orders", c.serviceURL)
 	req, err := http.NewRequest(http.MethodPut, url, bytes.NewBuffer(orderJSON))
 	if err != nil {
-		return fmt.Errorf("failed to create request: %w", err)
+		return uuid.UUID{}, fmt.Errorf("failed to create request: %w", err)
 	}
+	req.Header.Set("X-Idempotence-Key", data.IdempotenceKey)
 
 	resp, err := c.client.Do(req)
 	if err != nil {
-		return fmt.Errorf("failed to execute http request: %w", err)
+		return uuid.UUID{}, fmt.Errorf("failed to execute http request: %w", err)
 	}
 	if resp.StatusCode == http.StatusConflict {
-		return nil
+		return uuid.UUID{}, nil
 	}
-	if resp.StatusCode != http.StatusCreated {
-		return fmt.Errorf("failed to createOrder, httpCode: %v", resp.StatusCode)
+	if resp.StatusCode != http.StatusOK {
+		return uuid.UUID{}, fmt.Errorf("failed to createOrder, httpCode: %v", resp.StatusCode)
 	}
 
 	var result struct {
-		Success bool `json:"success"`
+		OrderID uuid.UUID `json:"order_id"`
+		Success bool      `json:"success"`
 	}
 
 	err = json.NewDecoder(resp.Body).Decode(&result)
 	if err != nil {
-		return fmt.Errorf("failed to decode createOrder response: %w", err)
+		return uuid.UUID{}, fmt.Errorf("failed to decode createOrder response: %w", err)
 	}
 
 	if !result.Success {
-		return api.ErrOrderRejected
+		return result.OrderID, api.ErrOrderRejected
 	}
-	return nil
+	return result.OrderID, nil
 }
 
 func New(serviceURL string) api.OrderAPI {

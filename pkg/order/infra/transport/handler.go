@@ -80,7 +80,6 @@ func createOrderHandler(srv *service.OrderService, w http.ResponseWriter, r *htt
 			OrderID: orderID,
 			Success: false,
 		})
-		w.WriteHeader(http.StatusCreated)
 		return
 	}
 	if errors.Is(err, service.ErrOrderAlreadyCreated) {

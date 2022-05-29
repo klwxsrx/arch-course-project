@@ -152,16 +152,19 @@ func checkoutHandler(srv *service.CartService, w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	err = srv.Checkout(authUserID, checkoutBody.AddressID)
+	orderID, err := srv.Checkout(authUserID, checkoutBody.AddressID)
 	switch {
 	case errors.Is(err, service.ErrEmptyCartCheckout):
 		w.WriteHeader(http.StatusNotFound)
+		return
 	case errors.Is(err, service.ErrCheckoutRejected):
 		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
 	case err != nil:
 		w.WriteHeader(http.StatusInternalServerError)
+		return
 	case err == nil:
-		w.WriteHeader(http.StatusNoContent)
+		_ = json.NewEncoder(w).Encode(orderID)
 	}
 }
 

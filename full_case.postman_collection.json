@@ -1,0 +1,855 @@
+{
+	"info": {
+		"_postman_id": "4c26c278-9a18-4f6f-8220-49c4563155d9",
+		"name": "Ecommerce shop full flow",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "19343365"
+	},
+	"item": [
+		{
+			"name": "[internal] Add product to shop catalog",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Successfully added\", function() {",
+							"    pm.response.to.have.status(200);",
+							"    pm.collectionVariables.set(\"ProductID\", pm.variables.replaceIn(pm.response.json()));",
+							"})"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "PUT",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Basic {{basicAuthData}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"title\": \"SomeBurger\",\n    \"description\": \"Delicious stuff\",\n    \"price\": 45000\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://{{baseUrl}}/products",
+					"protocol": "http",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"products"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "[internal] Check products in shop catalog",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Catalog has added product\", function() {",
+							"    pm.response.to.have.status(200);",
+							"    let result = pm.response.json()",
+							"    pm.expect(result).to.have.lengthOf(1);",
+							"    pm.expect(result[0]).to.have.property('id');",
+							"    pm.expect(result[0].id).to.eql(pm.variables.get(\"ProductID\"));",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Basic {{basicAuthData}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "[\"{{ProductID}}\"]",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://{{baseUrl}}/products",
+					"protocol": "http",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"products"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "[internal] Adds products to warehouse",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"var uuid = require('uuid');",
+							"pm.collectionVariables.set(\"idempotenceKey\", pm.variables.replaceIn(uuid.v4()));"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Items added\", function() {",
+							"    pm.response.to.have.status(204);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "PUT",
+				"header": [
+					{
+						"key": "X-Idempotence-Key",
+						"value": "{{idempotenceKey}}",
+						"type": "text"
+					},
+					{
+						"key": "Authorization",
+						"value": "Basic {{basicAuthData}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"item_id\": \"{{ProductID}}\",\n    \"quantity\": 10\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://{{baseUrl}}/warehouse/items",
+					"protocol": "http",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"warehouse",
+						"items"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "[internal] Get available items in warehouse",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Has no items left in stock\", function() {",
+							"    pm.response.to.have.status(200);",
+							"    let result = pm.response.json()",
+							"    pm.expect(result).to.have.lengthOf(1);",
+							"    pm.expect(result[0]).to.have.property('quantity');",
+							"    pm.expect(result[0].quantity).to.eql(10);",
+							"    pm.expect(result[0]).to.have.property('item_id');",
+							"    pm.expect(result[0].item_id).to.eql(pm.variables.get(\"ProductID\"));",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Basic {{basicAuthData}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "[\"{{ProductID}}\"]",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://{{baseUrl}}/warehouse/items/available",
+					"protocol": "http",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"warehouse",
+						"items",
+						"available"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "List shop products",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Shop has added product\", function() {",
+							"    pm.response.to.have.status(200);",
+							"    let result = pm.response.json();",
+							"    pm.expect(result.length).to.greaterThan(0);",
+							"    ",
+							"    let hasAddedItem = false;",
+							"    for (let i=0; i<result.length; i++) {",
+							"        if (result[i].id == pm.variables.get(\"ProductID\")) {",
+							"            hasAddedItem = true;",
+							"        }",
+							"    }",
+							"    pm.expect(hasAddedItem).to.have.equal(true);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://{{baseUrl}}/web/products",
+					"protocol": "http",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"web",
+						"products"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Put the product to shopping cart without authentication",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Authentication required\", function() {",
+							"    pm.response.to.have.status(401);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "PUT",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n        \"id\": \"{{ProductID}}\",\n        \"quantity\": 10\n    }",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://{{baseUrl}}/web/cart",
+					"protocol": "http",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"web",
+						"cart"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Checkout products in shopping cart without authentication",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Authentication required\", function() {",
+							"    pm.response.to.have.status(401);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"address_id\": \"cc581ccd-11b9-42a4-97be-f28c988fdf7c\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://{{baseUrl}}/web/cart/checkout",
+					"protocol": "http",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"web",
+						"cart",
+						"checkout"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "User registration",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Registered successfully\", function() {",
+							"    pm.response.to.have.status(200);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"pm.collectionVariables.set(\"userLogin\", pm.variables.replaceIn(\"{{$randomEmail}}\"));",
+							"pm.collectionVariables.set(\"userPassword\", pm.variables.replaceIn(\"{{$randomPassword}}\"));"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"login\": \"{{userLogin}}\",\n  \"password\": \"{{userPassword}}\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://{{baseUrl}}/auth/register",
+					"protocol": "http",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"auth",
+						"register"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "User login",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"User logged in\", function() {",
+							"    pm.response.to.have.status(204);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"login\": \"{{userLogin}}\",\n  \"password\": \"{{userPassword}}\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://{{baseUrl}}/auth/login",
+					"protocol": "http",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"auth",
+						"login"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Put all available products to shopping cart",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Added successfully\", function() {",
+							"    pm.response.to.have.status(204);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "PUT",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n        \"id\": \"{{ProductID}}\",\n        \"quantity\": 10\n    }",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://{{baseUrl}}/web/cart",
+					"protocol": "http",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"web",
+						"cart"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get shopping cart",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Shopping cart has added product\", function() {",
+							"    pm.response.to.have.status(200);",
+							"    let result = pm.response.json();",
+							"    pm.expect(result.length).to.greaterThan(0);",
+							"    ",
+							"    let hasAddedItem = false;",
+							"    for (let i=0; i<result.length; i++) {",
+							"        if (result[i].id == pm.variables.get(\"ProductID\")) {",
+							"            pm.expect(result[i].quantity).to.have.equal(10);",
+							"            hasAddedItem = true;",
+							"        }",
+							"    }",
+							"    pm.expect(hasAddedItem).to.have.equal(true);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://{{baseUrl}}/web/cart",
+					"protocol": "http",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"web",
+						"cart"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Checkout products in shopping cart",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Checkout Succeeed\", function() {",
+							"    pm.response.to.have.status(200);",
+							"    ",
+							"    pm.collectionVariables.set(\"OrderID\", pm.variables.replaceIn(pm.response.json()));",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"address_id\": \"cc581ccd-11b9-42a4-97be-f28c988fdf7c\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://{{baseUrl}}/web/cart/checkout",
+					"protocol": "http",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"web",
+						"cart",
+						"checkout"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get shopping cart after successful checkout",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Shopping cart is empty\", function() {",
+							"    pm.response.to.have.status(200);",
+							"    let result = pm.response.json();",
+							"    pm.expect(result.length).to.equal(0);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://{{baseUrl}}/web/cart",
+					"protocol": "http",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"web",
+						"cart"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "User logout",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Successfully logged out\", function() {",
+							"    pm.response.to.have.status(204);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"url": {
+					"raw": "http://{{baseUrl}}/auth/logout",
+					"protocol": "http",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"auth",
+						"logout"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "[internal] Get available items in warehouse",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Has no items left in stock\", function() {",
+							"    let result = pm.response.json()",
+							"    pm.expect(result).to.have.lengthOf(1);",
+							"    pm.expect(result[0]).to.have.property('quantity');",
+							"    pm.expect(result[0].quantity).to.eql(0);",
+							"    pm.expect(result[0]).to.have.property('item_id');",
+							"    pm.expect(result[0].item_id).to.eql(pm.variables.get(\"ProductID\"));",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Basic {{basicAuthData}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "[\"{{ProductID}}\"]",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://{{baseUrl}}/warehouse/items/available",
+					"protocol": "http",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"warehouse",
+						"items",
+						"available"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "[internal] Get payment info",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Order payment has completed status\", function() {",
+							"    let result = pm.response.json()",
+							"",
+							"    pm.expect(result).to.have.property('status');",
+							"    pm.expect(result.status).to.eql(\"completed\");",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Basic {{basicAuthData}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "http://{{baseUrl}}/payment/{{OrderID}}",
+					"protocol": "http",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"payment",
+						"{{OrderID}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "[internal] Get delivery info",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Delivery has scheduled status\", function() {",
+							"    let result = pm.response.json()",
+							"",
+							"    pm.expect(result).to.have.property('status');",
+							"    pm.expect(result.status).to.eql(\"scheduled\");",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Basic {{basicAuthData}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "http://{{baseUrl}}/delivery/{{OrderID}}",
+					"protocol": "http",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"delivery",
+						"{{OrderID}}"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "arch.homework",
+			"type": "string"
+		},
+		{
+			"key": "basicAuthData",
+			"value": "dXNlcjoxMjM0",
+			"type": "string"
+		},
+		{
+			"key": "idempotenceKey",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "userLogin",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "userPassword",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "ProductID",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "OrderID",
+			"value": ""
+		}
+	]
+}

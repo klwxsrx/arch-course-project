@@ -21,5 +21,5 @@ type CreateOrderData struct {
 var ErrOrderRejected = errors.New("order rejected")
 
 type OrderAPI interface {
-	CreateOrder(data *CreateOrderData) error
+	CreateOrder(data *CreateOrderData) (orderID uuid.UUID, err error)
 }
