@@ -1,0 +1,30 @@
+@startuml
+skinparam defaultTextAlignment center
+
+actor User [
+    Frontend
+]
+
+component Auth [
+    Auth Service
+]
+
+component Cart [
+    Cart Service
+]
+
+cloud APIGateway [
+    Api Gateway
+    (Traefik)
+]
+
+User -right-> APIGateway
+
+Auth -[hidden]down- Cart
+
+APIGateway -right-> Auth: GET /auth
+APIGateway <.right. Auth: X-Auth-User-ID: ...
+
+APIGateway -right-> Cart: POST /web/cart/checkout\n X-Auth-User-ID: ...
+
+@enduml
