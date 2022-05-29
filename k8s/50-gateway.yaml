@@ -38,9 +38,6 @@ spec:
         - name: catalog
           namespace: arch-course
           port: 8080
-      middlewares:
-        - name: user-auth
-          namespace: arch-course
     - kind: Rule
       match: PathPrefix(`/product`)
       services:
@@ -49,6 +46,15 @@ spec:
           port: 8080
       middlewares:
         - name: internal-auth
+          namespace: arch-course
+    - kind: Rule
+      match: PathPrefix(`/web/cart`)
+      services:
+        - name: cart
+          namespace: arch-course
+          port: 8080
+      middlewares:
+        - name: user-auth
           namespace: arch-course
     - kind: Rule
       match: PathPrefix(`/order`)

@@ -31,7 +31,7 @@ APIGateway <.right. Auth: X-Auth-User-ID: ...
 
 APIGateway --> Catalog: GET /web/products
 
-APIGateway --> Cart: PUT /web/cart\nPOST /web/checkout
+APIGateway --> Cart: GET /web/cart\nPUT /web/cart\nPOST /web/cart/checkout
 
 Cart --> Catalog: GET /products
 

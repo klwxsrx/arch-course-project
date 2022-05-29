@@ -19,15 +19,17 @@ type ProductService struct {
 	logger log.Logger
 }
 
-func (s *ProductService) Add(title, description string, price int) error {
+func (s *ProductService) Add(title, description string, price int) (uuid.UUID, error) {
 	err := s.validateProductProperties(title, price)
 	if err != nil {
-		return err
+		return uuid.UUID{}, err
 	}
 
+	var productID uuid.UUID
 	err = s.ufw.Execute(func(p persistence.PersistentProvider) error {
+		productID = p.ProductRepository().NextID()
 		product := &domain.Product{
-			ID:          p.ProductRepository().NextID(),
+			ID:          productID,
 			Title:       title,
 			Description: description,
 			Price:       price,
@@ -38,7 +40,7 @@ func (s *ProductService) Add(title, description string, price int) error {
 	if err != nil {
 		s.logger.WithError(err).With(log.Fields{"title": title}).Error("failed to add product")
 	}
-	return err
+	return productID, err
 }
 
 func (s *ProductService) Update(id uuid.UUID, title, description string, price int) error {

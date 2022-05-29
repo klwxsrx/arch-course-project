@@ -1,9 +1,9 @@
 .PHONY: clean docker-image/%
 
 all: clean \
-	bin/auth bin/catalog bin/order bin/payment bin/delivery bin/warehouse \
-	docker-image/auth docker-image/catalog docker-image/order docker-image/payment	docker-image/delivery \
-		docker-image/warehouse
+	bin/auth bin/catalog bin/cart bin/order bin/payment bin/delivery bin/warehouse \
+	docker-image/auth docker-image/catalog docker-image/cart docker-image/order docker-image/payment \
+		docker-image/delivery docker-image/warehouse
 
 clean:
 	rm -rf bin/*

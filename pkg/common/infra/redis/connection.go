@@ -2,6 +2,7 @@ package redis
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/cenkalti/backoff"
 	"github.com/go-redis/redis/v8"
@@ -19,12 +20,19 @@ type connection struct {
 	client *redis.Client
 }
 
-func (c *connection) Set(key, value string, ttl time.Duration) error {
-	return c.client.SetEX(context.Background(), key, value, ttl).Err()
+func (c *connection) Set(key, value string, ttl *time.Duration) error {
+	if ttl == nil {
+		return c.client.Set(context.Background(), key, value, 0).Err()
+	}
+	return c.client.Set(context.Background(), key, value, *ttl).Err()
 }
 
 func (c *connection) Get(key string) (string, error) {
-	return c.client.Get(context.Background(), key).Result()
+	val, err := c.client.Get(context.Background(), key).Result()
+	if errors.Is(err, redis.Nil) {
+		return "", ErrKeyDoesNotExist
+	}
+	return val, err
 }
 
 func (c *connection) Del(key string) error {

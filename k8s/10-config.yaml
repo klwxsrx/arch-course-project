@@ -41,6 +41,23 @@ stringData:
 apiVersion: v1
 kind: ConfigMap
 metadata:
+  name: cart-config
+  namespace: arch-course
+data:
+  redis-address: arch-course-redis-master:6379
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cart-redis-access
+  namespace: arch-course
+type: Opaque
+stringData:
+  redis-password: test1234
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
   name: catalog-config
   namespace: arch-course
 data:

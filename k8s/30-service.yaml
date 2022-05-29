@@ -27,6 +27,19 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
+  name: cart
+  namespace: arch-course
+spec:
+  selector:
+    app: cart
+  ports:
+    - name: web
+      port: 8080
+      targetPort: web
+---
+apiVersion: v1
+kind: Service
+metadata:
   name: order
   namespace: arch-course
 spec:

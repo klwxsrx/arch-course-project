@@ -2,6 +2,7 @@ package redis
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/klwxsrx/arch-course-project/pkg/auth/infra/auth"
@@ -19,7 +20,7 @@ type sessionStorage struct {
 }
 
 func (s *sessionStorage) Add(sessionID string, session *auth.Session, ttl time.Duration) error {
-	err := s.client.Set(s.getSessionKey(sessionID), s.encodeSession(session), ttl)
+	err := s.client.Set(s.getSessionKey(sessionID), s.encodeSession(session), &ttl)
 	if err != nil {
 		return fmt.Errorf("failed to add session: %w", err)
 	}
@@ -28,6 +29,9 @@ func (s *sessionStorage) Add(sessionID string, session *auth.Session, ttl time.D
 
 func (s *sessionStorage) Get(sessionID string) (*auth.Session, error) {
 	data, err := s.client.Get(s.getSessionKey(sessionID))
+	if errors.Is(err, redis.ErrKeyDoesNotExist) {
+		return nil, auth.ErrSessionNotFound
+	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to get session: %w", err)
 	}

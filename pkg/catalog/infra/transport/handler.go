@@ -2,6 +2,7 @@ package transport
 
 import (
 	"encoding/json"
+	"errors"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/klwxsrx/arch-course-project/pkg/catalog/app/query"
@@ -27,10 +28,10 @@ func getRoutes() []route {
 			getProductsHandler,
 		},
 		{
-			"getProducts",
+			"getProductsByIDs",
 			http.MethodGet,
 			"/products",
-			getProductsHandler,
+			getProductsByIDsHandler,
 		},
 		{
 			"addProduct",
@@ -59,6 +60,13 @@ type productJSONSchema struct {
 	Price       int    `json:"price"`
 }
 
+type productWithIDJSONSchema struct {
+	ID          uuid.UUID `json:"id"`
+	Title       string    `json:"title"`
+	Description string    `json:"description"`
+	Price       int       `json:"price"`
+}
+
 func getProductsHandler(_ *service.ProductService, service query.ProductService, w http.ResponseWriter, _ *http.Request) {
 	products, err := service.ListAll()
 	if err != nil {
@@ -66,16 +74,44 @@ func getProductsHandler(_ *service.ProductService, service query.ProductService,
 		return
 	}
 
-	type productJSONSchema struct {
-		ID          uuid.UUID `json:"id"`
-		Title       string    `json:"title"`
-		Description string    `json:"description"`
-		Price       int       `json:"price"`
+	result := make([]productWithIDJSONSchema, 0, len(products))
+	for _, product := range products {
+		result = append(result, productWithIDJSONSchema{
+			ID:          product.ID,
+			Title:       product.Title,
+			Description: product.Description,
+			Price:       product.Price,
+		})
 	}
 
-	result := make([]productJSONSchema, 0, len(products))
+	err = json.NewEncoder(w).Encode(result)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+}
+
+func getProductsByIDsHandler(_ *service.ProductService, service query.ProductService, w http.ResponseWriter, r *http.Request) {
+	var productIDs []uuid.UUID
+	err := json.NewDecoder(r.Body).Decode(&productIDs)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	products, err := service.GetByIDs(productIDs)
+	if errors.Is(err, query.ErrProductByIDNotFound) {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	result := make([]productWithIDJSONSchema, 0, len(products))
 	for _, product := range products {
-		result = append(result, productJSONSchema{
+		result = append(result, productWithIDJSONSchema{
 			ID:          product.ID,
 			Title:       product.Title,
 			Description: product.Description,
@@ -98,14 +134,14 @@ func addProductHandler(srv *service.ProductService, _ query.ProductService, w ht
 		return
 	}
 
-	err = srv.Add(productBody.Title, productBody.Description, productBody.Price)
+	productID, err := srv.Add(productBody.Title, productBody.Description, productBody.Price)
 	switch err {
 	default:
 		w.WriteHeader(http.StatusInternalServerError)
 	case service.ErrInvalidProperty:
 		w.WriteHeader(http.StatusBadRequest)
 	case nil:
-		w.WriteHeader(http.StatusCreated)
+		_ = json.NewEncoder(w).Encode(productID)
 	}
 }
 

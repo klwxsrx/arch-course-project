@@ -119,6 +119,49 @@ spec:
 kind: Deployment
 apiVersion: apps/v1
 metadata:
+  name: cart
+  namespace: arch-course
+  labels:
+    app: cart
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cart
+  template:
+    metadata:
+      labels:
+        app: cart
+    spec:
+      containers:
+        - name: cart
+          image: klwxsrx/arch-course-cart-service
+          env:
+            - name: ORDER_SERVICE_URL
+              value: http://order.arch-course.svc.cluster.local:8080
+            - name: CATALOG_SERVICE_URL
+              value: http://catalog.arch-course.svc.cluster.local:8080
+            - name: REDIS_ADDRESS
+              valueFrom:
+                configMapKeyRef:
+                  name: cart-config
+                  key: redis-address
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: cart-redis-access
+                  key: redis-password
+          ports:
+            - name: web
+              containerPort: 8080
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
   namespace: arch-course
   name: order
   labels:
