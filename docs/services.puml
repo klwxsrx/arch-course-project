@@ -29,9 +29,9 @@ User -right-> APIGateway
 APIGateway -right-> Auth: GET /auth
 APIGateway <.right. Auth: X-Auth-User-ID: ...
 
-APIGateway --> Catalog: GET /products
+APIGateway --> Catalog: GET /web/products
 
-APIGateway --> Cart: PUT /cart\nPOST /checkout
+APIGateway --> Cart: PUT /web/cart\nPOST /web/checkout
 
 Cart --> Catalog: GET /products
 

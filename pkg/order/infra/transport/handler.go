@@ -19,6 +19,7 @@ type createOrderItemData struct {
 }
 
 type createOrderData struct {
+	UserID    uuid.UUID             `json:"user_id"`
 	AddressID uuid.UUID             `json:"address_id"`
 	Items     []createOrderItemData `json:"items"`
 }
@@ -48,12 +49,6 @@ func getRoutes() []route {
 }
 
 func createOrderHandler(srv *service.OrderService, w http.ResponseWriter, r *http.Request) {
-	subjectID, err := parseSubjectID(r)
-	if err != nil {
-		w.WriteHeader(http.StatusUnauthorized)
-		return
-	}
-
 	idempotenceKey, err := parseIdempotenceKey(r)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -76,7 +71,7 @@ func createOrderHandler(srv *service.OrderService, w http.ResponseWriter, r *htt
 		})
 	}
 
-	orderID, err := srv.Create(idempotenceKey, subjectID, createOrder.AddressID, orderItems)
+	orderID, err := srv.Create(idempotenceKey, createOrder.UserID, createOrder.AddressID, orderItems)
 	if errors.Is(err, service.ErrOrderRejected) {
 		_ = json.NewEncoder(w).Encode(struct {
 			OrderID uuid.UUID `json:"order_id"`
@@ -114,11 +109,6 @@ func healthCheckHandler(_ *service.OrderService, w http.ResponseWriter, _ *http.
 	_ = json.NewEncoder(w).Encode(struct {
 		Status string `json:"status"`
 	}{"OK"})
-}
-
-func parseSubjectID(r *http.Request) (uuid.UUID, error) {
-	id := r.Header.Get("X-Auth-User-ID")
-	return uuid.Parse(id)
 }
 
 func parseIdempotenceKey(r *http.Request) (string, error) {

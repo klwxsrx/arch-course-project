@@ -33,6 +33,24 @@ spec:
           namespace: arch-course
           port: 8080
     - kind: Rule
+      match: PathPrefix(`/web/product`)
+      services:
+        - name: catalog
+          namespace: arch-course
+          port: 8080
+      middlewares:
+        - name: user-auth
+          namespace: arch-course
+    - kind: Rule
+      match: PathPrefix(`/product`)
+      services:
+        - name: catalog
+          namespace: arch-course
+          port: 8080
+      middlewares:
+        - name: internal-auth
+          namespace: arch-course
+    - kind: Rule
       match: PathPrefix(`/order`)
       services:
         - name: order

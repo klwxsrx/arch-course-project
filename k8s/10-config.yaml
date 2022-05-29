@@ -41,6 +41,26 @@ stringData:
 apiVersion: v1
 kind: ConfigMap
 metadata:
+  name: catalog-config
+  namespace: arch-course
+data:
+  mysql-host: arch-course-db-mysql
+  mysql-port: "3306"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: catalog-db-access
+  namespace: arch-course
+type: Opaque
+stringData:
+  mysql-database: archcourse
+  mysql-user: user
+  mysql-password: test1234
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
   name: order-config
   namespace: arch-course
 data:

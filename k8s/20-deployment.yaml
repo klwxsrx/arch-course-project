@@ -65,6 +65,60 @@ spec:
 kind: Deployment
 apiVersion: apps/v1
 metadata:
+  name: catalog
+  namespace: arch-course
+  labels:
+    app: catalog
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: catalog
+  template:
+    metadata:
+      labels:
+        app: catalog
+    spec:
+      containers:
+        - name: catalog
+          image: klwxsrx/arch-course-catalog-service
+          env:
+            - name: DATABASE_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: catalog-config
+                  key: mysql-host
+            - name: DATABASE_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: catalog-config
+                  key: mysql-port
+            - name: DATABASE_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: catalog-db-access
+                  key: mysql-database
+            - name: DATABASE_USER
+              valueFrom:
+                secretKeyRef:
+                  name: catalog-db-access
+                  key: mysql-user
+            - name: DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: catalog-db-access
+                  key: mysql-password
+          ports:
+            - name: web
+              containerPort: 8080
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
   namespace: arch-course
   name: order
   labels:
