@@ -1,4 +1,4 @@
-package api
+package async
 
 import (
 	"errors"
@@ -7,7 +7,7 @@ import (
 
 var (
 	ErrOrderItemsOutOfStock        = errors.New("items out of stock")
-	ErrOrderOperationsAlreadyExist = errors.New("order items are already exist")
+	ErrOrderOperationsAlreadyExist = errors.New("order items are already exist") // TOOD: delete
 )
 
 type ItemQuantity struct {

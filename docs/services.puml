@@ -27,7 +27,7 @@ component Delivery
 User -right-> APIGateway
 
 APIGateway -right-> Auth: GET /auth
-APIGateway <.right. Auth: X-Auth-User-ID: ...
+APIGateway <-right- Auth: X-Auth-User-ID: ...
 
 APIGateway --> Catalog: GET /web/products
 
@@ -37,10 +37,16 @@ Cart --> Catalog: GET /products
 
 Cart ---> Order: PUT /orders
 
-Order ---> Payment: PUT /payments\nPOST /payment/{orderID}/complete\nPOST /payment/{orderID}/cancel
+Order ...> Payment: AuthorizePayment\nCompletePayment\nCancelPayment
 
-Order ---> Warehouse: POST /warehouse/order/{orderID}/reserve\nDELETE /warehouse/order/{orderID}/reserve
+Order <... Payment: PaymentAuthorized\nPaymentRejected\nPaymentCompleted\nPaymentCompletionRejected
 
-Order --->  Delivery: POST /delivery/{orderID}/schedule\nDELETE /delivery/{orderID}/schedule
+Order ...> Warehouse: ReserveItems\nDeleteItemsReservation
+
+Order <... Warehouse: ItemsReserved\nItemsOutOfStock
+
+Order ...> Delivery: ScheduleDelivery\nCancelSchedule
+
+Order <... Delivery: DeliveryScheduled
 
 @enduml

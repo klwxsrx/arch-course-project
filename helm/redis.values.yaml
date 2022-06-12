@@ -1,0 +1,6 @@
+auth:
+  enabled: true
+  password: test1234
+
+replica:
+  replicaCount: 1

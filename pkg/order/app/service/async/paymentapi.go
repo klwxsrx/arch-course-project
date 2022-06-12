@@ -1,4 +1,4 @@
-package api
+package async
 
 import (
 	"errors"
@@ -8,7 +8,7 @@ import (
 var (
 	ErrOrderPaymentNotFound      = errors.New("order payment not found")
 	ErrOrderPaymentNotAuthorized = errors.New("payment not authorized")
-	ErrOrderPaymentRejected      = errors.New("payment rejected")
+	ErrOrderPaymentRejected      = errors.New("payment rejected") // TODO: delete
 )
 
 type PaymentAPI interface {

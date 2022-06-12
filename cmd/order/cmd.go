@@ -5,14 +5,14 @@ import (
 	"errors"
 	"github.com/klwxsrx/arch-course-project/data/mysql/order"
 	"github.com/klwxsrx/arch-course-project/pkg/common/app/log"
+	"github.com/klwxsrx/arch-course-project/pkg/common/app/message"
 	loggerImpl "github.com/klwxsrx/arch-course-project/pkg/common/infra/logger"
 	commonMysql "github.com/klwxsrx/arch-course-project/pkg/common/infra/mysql"
+	"github.com/klwxsrx/arch-course-project/pkg/common/infra/pulsar"
+	"github.com/klwxsrx/arch-course-project/pkg/order/app/persistence"
 	"github.com/klwxsrx/arch-course-project/pkg/order/app/service"
-	"github.com/klwxsrx/arch-course-project/pkg/order/infra/deliveryapi"
 	"github.com/klwxsrx/arch-course-project/pkg/order/infra/mysql"
-	"github.com/klwxsrx/arch-course-project/pkg/order/infra/paymentapi"
 	"github.com/klwxsrx/arch-course-project/pkg/order/infra/transport"
-	"github.com/klwxsrx/arch-course-project/pkg/order/infra/warehouseapi"
 	"net/http"
 	"os"
 	"os/signal"
@@ -42,15 +42,21 @@ func main() {
 		logger.WithError(err).Fatal("failed to execute db migration")
 	}
 
-	paymentAPI := paymentapi.New(config.PaymentServiceURL)
-	warehouseAPI := warehouseapi.New(config.WarehouseServiceURL)
-	deliveryAPI := deliveryapi.New(config.DeliveryServiceURL)
+	pulsarConn, err := pulsar.NewConnection(config.MessageBrokerAddress, logger)
+	if err != nil {
+		logger.WithError(err).Fatal("failed to setup message broker connection")
+	}
+
+	messageStore := commonMysql.NewMessageStore(client)
+	pulsarMessageSender := pulsar.NewMessageSender(pulsarConn)
+	synchronization := commonMysql.NewSynchronization(client)
+	messageDispatcher := message.NewDispatcher(messageStore, pulsarMessageSender, synchronization, logger)
+	defer messageDispatcher.Close()
+	messageDispatcher.Dispatch()
 
 	unitOfWork := mysql.NewUnitOfWork(client)
+	unitOfWork = persistence.NewUnitOfWorkCompleteNotifier(unitOfWork, messageDispatcher.Dispatch)
 	orderService := service.NewOrderService(
-		paymentAPI,
-		warehouseAPI,
-		deliveryAPI,
 		unitOfWork,
 		logger,
 	)

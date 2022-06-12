@@ -1,18 +1,17 @@
 package paymentapi
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"github.com/google/uuid"
-	"github.com/klwxsrx/arch-course-project/pkg/order/app/service/api"
-	"net/http"
+	"github.com/klwxsrx/arch-course-project/pkg/common/app/event"
+	"github.com/klwxsrx/arch-course-project/pkg/order/app/service/async"
 )
 
+const PaymentEventTopicName = "payment-event"
+
 type apiClient struct {
-	client     *http.Client
-	serviceURL string
+	eventDispatcher event.Dispatcher
 }
 
 func (a *apiClient) AuthorizeOrder(orderID uuid.UUID, totalAmount int) error {
@@ -28,78 +27,54 @@ func (a *apiClient) AuthorizeOrder(orderID uuid.UUID, totalAmount int) error {
 		return errors.New("failed to encode json request")
 	}
 
-	url := fmt.Sprintf("%s/payments", a.serviceURL)
-	req, err := http.NewRequest(http.MethodPut, url, bytes.NewBuffer(createPaymentJSON))
+	err = a.eventDispatcher.Dispatch(&event.Event{
+		Type:      "AuthorizePayment",
+		TopicName: PaymentEventTopicName,
+		Key:       orderID.String(),
+		Body:      createPaymentJSON,
+	})
 	if err != nil {
-		return fmt.Errorf("failed to create request: %w", err)
+		return errors.New("failed to dispatch message")
 	}
-
-	resp, err := a.client.Do(req)
-	if err != nil {
-		return fmt.Errorf("failed to execute http request: %w", err)
-	}
-
-	switch resp.StatusCode {
-	case http.StatusCreated:
-		return nil
-	default:
-		return fmt.Errorf("failed to createPayment, httpCode: %v", resp.StatusCode)
-	}
+	return nil
 }
 
 func (a *apiClient) CompleteTransaction(orderID uuid.UUID) error {
-	url := fmt.Sprintf("%s/payment/%v/complete", a.serviceURL, orderID)
-	req, err := http.NewRequest(http.MethodPost, url, nil)
+	orderIDJSON, err := json.Marshal(orderID.String())
 	if err != nil {
-		return fmt.Errorf("failed to create request: %w", err)
+		return errors.New("failed to encode uuid to json")
 	}
 
-	resp, err := a.client.Do(req)
+	err = a.eventDispatcher.Dispatch(&event.Event{
+		Type:      "CompletePayment",
+		TopicName: PaymentEventTopicName,
+		Key:       orderID.String(),
+		Body:      orderIDJSON,
+	})
 	if err != nil {
-		return fmt.Errorf("failed to execute http request: %w", err)
+		return errors.New("failed to dispatch message")
 	}
-
-	switch resp.StatusCode {
-	case http.StatusNoContent:
-		return nil
-	case http.StatusNotFound:
-		return api.ErrOrderPaymentNotFound
-	case http.StatusMethodNotAllowed:
-		return api.ErrOrderPaymentNotAuthorized
-	case http.StatusNotAcceptable:
-		return api.ErrOrderPaymentRejected
-	default:
-		return fmt.Errorf("failed to completeTransaction, httpCode: %v", resp.StatusCode)
-	}
+	return nil
 }
 
 func (a *apiClient) CancelOrder(orderID uuid.UUID) error {
-	url := fmt.Sprintf("%s/payment/%v/cancel", a.serviceURL, orderID)
-	req, err := http.NewRequest(http.MethodPost, url, nil)
+	orderIDJSON, err := json.Marshal(orderID.String())
 	if err != nil {
-		return fmt.Errorf("failed to create request: %w", err)
+		return errors.New("failed to encode uuid to json")
 	}
 
-	resp, err := a.client.Do(req)
+	err = a.eventDispatcher.Dispatch(&event.Event{
+		Type:      "CancelPayment",
+		TopicName: PaymentEventTopicName,
+		Key:       orderID.String(),
+		Body:      orderIDJSON,
+	})
 	if err != nil {
-		return fmt.Errorf("failed to execute http request: %w", err)
+		return errors.New("failed to dispatch message")
 	}
-
-	switch resp.StatusCode {
-	case http.StatusNoContent:
-		return nil
-	case http.StatusNotFound:
-		return api.ErrOrderPaymentNotFound
-	case http.StatusMethodNotAllowed:
-		return api.ErrOrderPaymentNotAuthorized
-	default:
-		return fmt.Errorf("failed to cancelOrder, httpCode: %v", resp.StatusCode)
-	}
+	return nil
 }
 
-func New(serviceURL string) api.PaymentAPI {
-	return &apiClient{
-		client:     &http.Client{},
-		serviceURL: serviceURL,
-	}
+func New(messageDispatcher event.Dispatcher) async.PaymentAPI {
+	return &apiClient{eventDispatcher: messageDispatcher}
 }

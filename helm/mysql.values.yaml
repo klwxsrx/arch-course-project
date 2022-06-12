@@ -1,0 +1,7 @@
+image:
+  tag: "8.0"
+
+auth:
+  database: archcourse
+  username: user
+  password: test1234

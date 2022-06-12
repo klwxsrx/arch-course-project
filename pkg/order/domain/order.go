@@ -9,10 +9,13 @@ type OrderStatus int
 
 const (
 	OrderStatusCreated OrderStatus = iota
-	OrderStatusCancelled
+	OrderPaymentAuthorized
+	OrderItemsReserved
+	OrderDeliveryScheduled
 	OrderStatusAwaitingDelivery
 	OrderStatusProcessingDelivery
 	OrderStatusDelivered
+	OrderStatusCancelled
 )
 
 type OrderItem struct {

@@ -2,13 +2,13 @@
 
 activate Order
 
-Order -> Payment: AuthorizeOrderPayment
+Order -> Payment: AuthorizePayment
 activate Payment
 
 Order <-- Payment: OK
 deactivate Payment
 
-Order -> Warehouse: ReserveOrderItems
+Order -> Warehouse: ReserveItems
 activate Warehouse
 
 Order <-- Warehouse: OK
@@ -20,7 +20,7 @@ activate Delivery
 Order <-- Delivery: OK
 deactivate Delivery
 
-Order -> Payment: CompletePaymentTransaction
+Order -> Payment: CompletePayment
 activate Payment
 
 alt #lightgreen Успешное подтверждение платежа
@@ -32,19 +32,19 @@ else #lightpink Откат операций
 Order <-- Payment: ERROR
 deactivate Payment
 
-Order -> Delivery: RemoveDeliverySchedule
+Order -> Delivery: CancelSchedule
 activate Delivery
 
 Order <-- Delivery: OK
 deactivate Delivery
 
-Order -> Warehouse: RemoveOrderItemsReservation
+Order -> Warehouse: RemoveItemsReservation
 activate Warehouse
 
 Order <-- Warehouse: OK
 deactivate Warehouse
 
-Order -> Payment: CancelOrderPayment\n(в случае отклонения платежа\n делать ничего не нужно)
+Order -> Payment: CancelPayment\n(в случае отклонения платежа\n делать ничего не нужно)
 activate Payment
 
 Order <-- Payment: OK

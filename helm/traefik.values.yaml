@@ -1,0 +1,9 @@
+ports:
+  websecure:
+    expose: false
+
+providers:
+  kubernetesIngress:
+    enabled: false
+  kubernetesCRD:
+    namespaces: arch-course

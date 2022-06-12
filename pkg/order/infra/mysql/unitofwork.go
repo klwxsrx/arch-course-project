@@ -2,14 +2,31 @@ package mysql
 
 import (
 	"fmt"
+	"github.com/klwxsrx/arch-course-project/pkg/common/app/event"
 	"github.com/klwxsrx/arch-course-project/pkg/common/app/idempotence"
 	"github.com/klwxsrx/arch-course-project/pkg/common/infra/mysql"
 	"github.com/klwxsrx/arch-course-project/pkg/order/app/persistence"
+	"github.com/klwxsrx/arch-course-project/pkg/order/app/service/async"
 	"github.com/klwxsrx/arch-course-project/pkg/order/domain"
+	"github.com/klwxsrx/arch-course-project/pkg/order/infra/deliveryapi"
+	"github.com/klwxsrx/arch-course-project/pkg/order/infra/paymentapi"
+	"github.com/klwxsrx/arch-course-project/pkg/order/infra/warehouseapi"
 )
 
 type persistentProvider struct {
 	db mysql.Client
+}
+
+func (p *persistentProvider) PaymentAPI() async.PaymentAPI {
+	return paymentapi.New(p.eventDispatcher(p.db))
+}
+
+func (p *persistentProvider) WarehouseAPI() async.WarehouseAPI {
+	return warehouseapi.New(p.eventDispatcher(p.db))
+}
+
+func (p *persistentProvider) DeliveryAPI() async.DeliveryAPI {
+	return deliveryapi.New(p.eventDispatcher(p.db))
 }
 
 func (p *persistentProvider) OrderRepository() domain.OrderRepository {
@@ -18,6 +35,10 @@ func (p *persistentProvider) OrderRepository() domain.OrderRepository {
 
 func (p *persistentProvider) IdempotenceKeyStore() idempotence.KeyStore {
 	return NewIdempotenceKeyStore(p.db)
+}
+
+func (p *persistentProvider) eventDispatcher(db mysql.Client) event.Dispatcher {
+	return event.NewDispatcher(mysql.NewMessageStore(db))
 }
 
 type unitOfWork struct {
