@@ -5,8 +5,12 @@ import (
 	"errors"
 	"github.com/klwxsrx/arch-course-project/data/mysql/payment"
 	"github.com/klwxsrx/arch-course-project/pkg/common/app/log"
+	commonMessage "github.com/klwxsrx/arch-course-project/pkg/common/app/message"
 	loggerImpl "github.com/klwxsrx/arch-course-project/pkg/common/infra/logger"
 	commonMysql "github.com/klwxsrx/arch-course-project/pkg/common/infra/mysql"
+	"github.com/klwxsrx/arch-course-project/pkg/common/infra/pulsar"
+	"github.com/klwxsrx/arch-course-project/pkg/payment/app/message"
+	"github.com/klwxsrx/arch-course-project/pkg/payment/app/persistence"
 	"github.com/klwxsrx/arch-course-project/pkg/payment/app/query"
 	"github.com/klwxsrx/arch-course-project/pkg/payment/app/service"
 	"github.com/klwxsrx/arch-course-project/pkg/payment/infra/mysql"
@@ -16,6 +20,8 @@ import (
 	"os/signal"
 	"syscall"
 )
+
+const serviceName = "payment"
 
 func main() {
 	logger := loggerImpl.New()
@@ -40,12 +46,43 @@ func main() {
 		logger.WithError(err).Fatal("failed to execute db migration")
 	}
 
+	pulsarConn, err := pulsar.NewConnection(config.MessageBrokerAddress, logger)
+	if err != nil {
+		logger.WithError(err).Fatal("failed to setup message broker connection")
+	}
+
+	messageSender := pulsar.NewMessageSender(pulsarConn)
+	defer messageSender.Close()
+
+	messageDispatcher := commonMessage.NewDispatcher(
+		commonMysql.NewMessageStore(client),
+		messageSender,
+		commonMysql.NewSynchronization(client),
+		logger,
+	)
+	defer messageDispatcher.Close()
+	messageDispatcher.Dispatch()
+
 	unitOfWork := mysql.NewUnitOfWork(client)
+	unitOfWork = persistence.NewUnitOfWorkCompleteNotifier(unitOfWork, messageDispatcher.Dispatch)
 	paymentService := service.NewPaymentService(
 		unitOfWork,
 		logger,
 	)
 	paymentQueryService := mysql.NewPaymentQueryService(client)
+
+	subscriberCloser, err := pulsar.NewMessageSubscriber(
+		serviceName,
+		[]commonMessage.Handler{
+			message.NewAuthorizePaymentHandler(paymentService),
+		},
+		pulsarConn,
+		logger,
+	)
+	if err != nil {
+		logger.WithError(err).Fatal("failed to run message subscriber")
+	}
+	defer subscriberCloser()
 
 	server, err := startServer(paymentService, paymentQueryService, logger)
 	if err != nil {

@@ -6,10 +6,10 @@ import (
 	"github.com/klwxsrx/arch-course-project/pkg/order/app/service/async"
 )
 
-const WarehouseMessageTopicName = "warehouse-event"
+const WarehouseMessageTopicName = "warehouse_event"
 
 type apiClient struct {
-	messageDispatcher event.Dispatcher
+	eventDispatcher event.Dispatcher
 }
 
 func (a *apiClient) ReserveOrderItems(orderID uuid.UUID, items []async.ItemQuantity) error {
@@ -22,6 +22,6 @@ func (a *apiClient) RemoveOrderItemsReservation(orderID uuid.UUID) error {
 	return nil
 }
 
-func New(messageDispatcher event.Dispatcher) async.WarehouseAPI {
-	return &apiClient{messageDispatcher: messageDispatcher}
+func New(eventDispatcher event.Dispatcher) async.WarehouseAPI {
+	return &apiClient{eventDispatcher: eventDispatcher}
 }

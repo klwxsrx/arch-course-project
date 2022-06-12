@@ -2,18 +2,11 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"github.com/google/uuid"
 	"github.com/klwxsrx/arch-course-project/pkg/common/app/log"
 	"github.com/klwxsrx/arch-course-project/pkg/payment/app/persistence"
 	"github.com/klwxsrx/arch-course-project/pkg/payment/domain"
-)
-
-const testTotalAmountToFail = 1000000
-
-var (
-	ErrPaymentNotFound      = errors.New("payment not found")
-	ErrPaymentNotAuthorized = errors.New("payment not authorized")
-	ErrPaymentRejected      = errors.New("payment has been rejected")
 )
 
 type PaymentService struct {
@@ -21,13 +14,13 @@ type PaymentService struct {
 	logger log.Logger
 }
 
-func (s *PaymentService) CreatePayment(orderID uuid.UUID, totalAmount int) error {
+func (s *PaymentService) AuthorizePayment(orderID uuid.UUID, totalAmount int) error {
 	// TODO: authorize payment from payment gateway
 
 	err := s.ufw.Execute(func(p persistence.PersistentProvider) error {
 		payment, err := p.PaymentRepository().GetByID(orderID)
 		if err != nil && !errors.Is(err, domain.ErrPaymentNotFound) {
-			return err
+			return fmt.Errorf("failed to get payment: %w", err)
 		}
 		if err == nil {
 			return nil
@@ -39,66 +32,70 @@ func (s *PaymentService) CreatePayment(orderID uuid.UUID, totalAmount int) error
 			Status:      domain.PaymentStatusAuthorized,
 		}
 
-		return p.PaymentRepository().Store(payment)
+		err = p.PaymentRepository().Store(payment)
+		if err != nil {
+			return fmt.Errorf("failed to store payment: %w", err)
+		}
+
+		err = p.OrderAPI().NotifyPaymentAuthorized(orderID)
+		if err != nil {
+			return fmt.Errorf("failed to notify payment authorized: %w", err)
+		}
+		return nil
 	})
 	if err != nil {
 		s.logger.WithError(err).With(log.Fields{
 			"orderID":     orderID,
 			"totalAmount": totalAmount,
-		}).Error("failed to create payment")
+		}).Error("failed to authorize payment")
 		return err
 	}
+
+	s.logger.With(log.Fields{
+		"orderID":     orderID,
+		"totalAmount": totalAmount,
+	}).Info("payment authorized")
 	return nil
 }
 
 func (s *PaymentService) CompletePayment(orderID uuid.UUID) error {
 	// TODO: complete payment from payment gateway
 
-	var testRejectedPayment bool
 	err := s.ufw.Execute(func(p persistence.PersistentProvider) error {
 		payment, err := p.PaymentRepository().GetByID(orderID)
 		if errors.Is(err, domain.ErrPaymentNotFound) {
-			return ErrPaymentNotFound
-		}
-		if err != nil {
-			return err
-		}
-
-		if payment.Status == domain.PaymentStatusCompleted {
 			return nil
 		}
-		if payment.Status != domain.PaymentStatusAuthorized {
-			return ErrPaymentNotAuthorized
+		if err != nil {
+			return fmt.Errorf("failed to get payment: %w", err)
 		}
-
-		// test case to fail the saga
-		if payment.TotalAmount == testTotalAmountToFail {
-			payment.Status = domain.PaymentStatusRejected
-
-			err := p.PaymentRepository().Store(payment)
-			if err != nil {
-				return err
-			}
-			testRejectedPayment = true
+		if payment.Status != domain.PaymentStatusAuthorized {
 			return nil
 		}
 
 		payment.Status = domain.PaymentStatusCompleted
-		return p.PaymentRepository().Store(payment)
-	})
-	if testRejectedPayment {
-		return ErrPaymentRejected
-	}
+		err = p.PaymentRepository().Store(payment)
+		if err != nil {
+			return fmt.Errorf("failed to store completed payment: %w", err)
+		}
 
-	if errors.Is(err, ErrPaymentNotFound) || errors.Is(err, ErrPaymentNotAuthorized) {
+		err = p.OrderAPI().NotifyPaymentCompleted(orderID)
+		if err != nil {
+			return fmt.Errorf("failed to notify payment completion: %w", err)
+		}
 		return nil
-	}
+	})
 	if err != nil {
 		s.logger.WithError(err).With(log.Fields{
 			"orderID": orderID,
 		}).Error("failed to complete payment")
+		return err
 	}
-	return err
+
+	s.logger.With(log.Fields{
+		"orderID": orderID,
+	}).Info("payment completed")
+	return nil
 }
 
 func (s *PaymentService) CancelPayment(orderID uuid.UUID) error {
@@ -107,31 +104,33 @@ func (s *PaymentService) CancelPayment(orderID uuid.UUID) error {
 	err := s.ufw.Execute(func(p persistence.PersistentProvider) error {
 		payment, err := p.PaymentRepository().GetByID(orderID)
 		if errors.Is(err, domain.ErrPaymentNotFound) {
-			return ErrPaymentNotFound
-		}
-		if err != nil {
-			return err
-		}
-
-		if payment.Status == domain.PaymentStatusCancelled {
 			return nil
 		}
+		if err != nil {
+			return fmt.Errorf("failed to get payment: %w", err)
+		}
+
 		if payment.Status != domain.PaymentStatusAuthorized {
-			return ErrPaymentNotAuthorized
+			return nil
 		}
 
 		payment.Status = domain.PaymentStatusCancelled
-		return p.PaymentRepository().Store(payment)
-	})
-	if errors.Is(err, ErrPaymentNotFound) || errors.Is(err, ErrPaymentNotAuthorized) {
+		err = p.PaymentRepository().Store(payment)
+		if err != nil {
+			return fmt.Errorf("failed to store cancelled payment: %w", err)
+		}
 		return nil
-	}
+	})
 	if err != nil {
 		s.logger.WithError(err).With(log.Fields{
 			"orderID": orderID,
 		}).Error("failed to cancel payment")
 		return err
 	}
+
+	s.logger.With(log.Fields{
+		"orderID": orderID,
+	}).Info("payment cancelled")
 	return nil
 }
 

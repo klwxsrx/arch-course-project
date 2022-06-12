@@ -47,10 +47,15 @@ func main() {
 		logger.WithError(err).Fatal("failed to setup message broker connection")
 	}
 
-	messageStore := commonMysql.NewMessageStore(client)
-	pulsarMessageSender := pulsar.NewMessageSender(pulsarConn)
-	synchronization := commonMysql.NewSynchronization(client)
-	messageDispatcher := message.NewDispatcher(messageStore, pulsarMessageSender, synchronization, logger)
+	messageSender := pulsar.NewMessageSender(pulsarConn)
+	defer messageSender.Close()
+
+	messageDispatcher := message.NewDispatcher(
+		commonMysql.NewMessageStore(client),
+		messageSender,
+		commonMysql.NewSynchronization(client),
+		logger,
+	)
 	defer messageDispatcher.Close()
 	messageDispatcher.Dispatch()
 

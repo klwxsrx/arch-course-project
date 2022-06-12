@@ -9,12 +9,12 @@ import (
 
 const propertyMessageType = "type"
 
-type messageSender struct {
+type MessageSender struct {
 	conn      Connection
 	producers map[string]pulsar.Producer
 }
 
-func (s *messageSender) Send(msg *message.Message) error {
+func (s *MessageSender) Send(msg *message.Message) error {
 	producer, err := s.getProducerForTopic(msg.TopicName)
 	if err != nil {
 		return fmt.Errorf("failed to create producer for topic %s: %w", msg.TopicName, err)
@@ -31,7 +31,14 @@ func (s *messageSender) Send(msg *message.Message) error {
 	return nil
 }
 
-func (s *messageSender) getProducerForTopic(topic string) (pulsar.Producer, error) {
+func (s *MessageSender) Close() {
+	for _, p := range s.producers {
+		p.Close()
+	}
+}
+
+func (s *MessageSender) getProducerForTopic(topic string) (pulsar.Producer, error) {
+	topic = getTopicFullName(topic)
 	if p, ok := s.producers[topic]; ok {
 		return p, nil
 	}
@@ -45,6 +52,6 @@ func (s *messageSender) getProducerForTopic(topic string) (pulsar.Producer, erro
 	return p, nil
 }
 
-func NewMessageSender(conn Connection) message.Sender {
-	return &messageSender{conn: conn, producers: make(map[string]pulsar.Producer)}
+func NewMessageSender(conn Connection) *MessageSender {
+	return &MessageSender{conn: conn, producers: make(map[string]pulsar.Producer)}
 }

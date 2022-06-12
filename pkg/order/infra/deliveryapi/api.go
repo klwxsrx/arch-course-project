@@ -7,7 +7,7 @@ import (
 )
 
 type apiClient struct {
-	messageDispatcher event.Dispatcher
+	eventDispatcher event.Dispatcher
 }
 
 func (a *apiClient) ScheduleDelivery(orderID uuid.UUID, addressID uuid.UUID) error {
@@ -20,6 +20,6 @@ func (a *apiClient) DeleteDeliverySchedule(orderID uuid.UUID) error {
 	return nil
 }
 
-func New(messageDispatcher event.Dispatcher) async.DeliveryAPI {
-	return &apiClient{messageDispatcher: messageDispatcher}
+func New(eventDispatcher event.Dispatcher) async.DeliveryAPI {
+	return &apiClient{eventDispatcher: eventDispatcher}
 }

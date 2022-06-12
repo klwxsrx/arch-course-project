@@ -2,9 +2,12 @@ package mysql
 
 import (
 	"fmt"
+	"github.com/klwxsrx/arch-course-project/pkg/common/app/event"
 	"github.com/klwxsrx/arch-course-project/pkg/common/infra/mysql"
 	"github.com/klwxsrx/arch-course-project/pkg/payment/app/persistence"
+	"github.com/klwxsrx/arch-course-project/pkg/payment/app/service/async"
 	"github.com/klwxsrx/arch-course-project/pkg/payment/domain"
+	"github.com/klwxsrx/arch-course-project/pkg/payment/infra/orderapi"
 )
 
 type persistentProvider struct {
@@ -13,6 +16,14 @@ type persistentProvider struct {
 
 func (p *persistentProvider) PaymentRepository() domain.PaymentRepository {
 	return NewPaymentRepository(p.db)
+}
+
+func (p *persistentProvider) OrderAPI() async.OrderAPI {
+	return orderapi.New(p.eventDispatcher(p.db))
+}
+
+func (p *persistentProvider) eventDispatcher(db mysql.Client) event.Dispatcher {
+	return event.NewDispatcher(mysql.NewMessageStore(db))
 }
 
 type unitOfWork struct {

@@ -30,24 +30,6 @@ func getRoutes() []route {
 			getPaymentHandler,
 		},
 		{
-			"createPayment",
-			http.MethodPut,
-			"/payments",
-			createPaymentHandler,
-		},
-		{
-			"completePayment",
-			http.MethodPost,
-			"/payment/{orderID}/complete",
-			completePaymentHandler,
-		},
-		{
-			"cancelPayment",
-			http.MethodPost,
-			"/payment/{orderID}/cancel",
-			cancelPaymentHandler,
-		},
-		{
 			"health",
 			http.MethodGet,
 			"/healthz",
@@ -101,76 +83,6 @@ func getPaymentHandler(_ *service.PaymentService, srv query.PaymentQueryService,
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-}
-
-func createPaymentHandler(srv *service.PaymentService, _ query.PaymentQueryService, w http.ResponseWriter, r *http.Request) {
-	var createPayment struct {
-		OrderID     uuid.UUID `json:"order_id"`
-		TotalAmount int       `json:"total_amount"`
-	}
-
-	err := json.NewDecoder(r.Body).Decode(&createPayment)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	err = srv.CreatePayment(createPayment.OrderID, createPayment.TotalAmount)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	w.WriteHeader(http.StatusCreated)
-}
-
-func completePaymentHandler(srv *service.PaymentService, _ query.PaymentQueryService, w http.ResponseWriter, r *http.Request) {
-	orderID, err := parseUUID(mux.Vars(r)["orderID"])
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	err = srv.CompletePayment(orderID)
-	if errors.Is(err, service.ErrPaymentNotFound) {
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
-	if errors.Is(err, service.ErrPaymentNotAuthorized) {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-	if errors.Is(err, service.ErrPaymentRejected) {
-		w.WriteHeader(http.StatusNotAcceptable)
-		return
-	}
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	w.WriteHeader(http.StatusNoContent)
-}
-
-func cancelPaymentHandler(srv *service.PaymentService, _ query.PaymentQueryService, w http.ResponseWriter, r *http.Request) {
-	orderID, err := parseUUID(mux.Vars(r)["orderID"])
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	err = srv.CancelPayment(orderID)
-	if errors.Is(err, service.ErrPaymentNotFound) {
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
-	if errors.Is(err, service.ErrPaymentNotAuthorized) {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	w.WriteHeader(http.StatusNoContent)
 }
 
 func healthCheckHandler(_ *service.PaymentService, _ query.PaymentQueryService, w http.ResponseWriter, _ *http.Request) {

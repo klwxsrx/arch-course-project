@@ -8,7 +8,7 @@ import (
 	"github.com/klwxsrx/arch-course-project/pkg/order/app/service/async"
 )
 
-const PaymentEventTopicName = "payment-event"
+const PaymentEventTopicName = "payment_event"
 
 type apiClient struct {
 	eventDispatcher event.Dispatcher
@@ -28,7 +28,7 @@ func (a *apiClient) AuthorizeOrder(orderID uuid.UUID, totalAmount int) error {
 	}
 
 	err = a.eventDispatcher.Dispatch(&event.Event{
-		Type:      "AuthorizePayment",
+		Type:      "authorize_payment",
 		TopicName: PaymentEventTopicName,
 		Key:       orderID.String(),
 		Body:      createPaymentJSON,
@@ -46,7 +46,7 @@ func (a *apiClient) CompleteTransaction(orderID uuid.UUID) error {
 	}
 
 	err = a.eventDispatcher.Dispatch(&event.Event{
-		Type:      "CompletePayment",
+		Type:      "complete_payment",
 		TopicName: PaymentEventTopicName,
 		Key:       orderID.String(),
 		Body:      orderIDJSON,
@@ -57,14 +57,14 @@ func (a *apiClient) CompleteTransaction(orderID uuid.UUID) error {
 	return nil
 }
 
-func (a *apiClient) CancelOrder(orderID uuid.UUID) error {
+func (a *apiClient) CancelPayment(orderID uuid.UUID) error {
 	orderIDJSON, err := json.Marshal(orderID.String())
 	if err != nil {
 		return errors.New("failed to encode uuid to json")
 	}
 
 	err = a.eventDispatcher.Dispatch(&event.Event{
-		Type:      "CancelPayment",
+		Type:      "cancel_payment",
 		TopicName: PaymentEventTopicName,
 		Key:       orderID.String(),
 		Body:      orderIDJSON,
