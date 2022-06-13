@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"github.com/google/uuid"
 	"github.com/klwxsrx/arch-course-project/pkg/common/app/idempotence"
 	"github.com/klwxsrx/arch-course-project/pkg/common/app/log"
@@ -12,11 +13,9 @@ import (
 const decreaseItemBalanceLockKey = "decrease_warehouse_balance"
 
 var (
-	ErrItemAlreadyAdded            = errors.New("item is already added")
-	ErrInvalidQuantity             = errors.New("invalid quantity")
-	ErrOrderOperationsAlreadyExist = errors.New("order items are already exist")
-	ErrItemNotFound                = errors.New("item not found")
-	ErrItemsOutOfStock             = errors.New("items out of stock")
+	ErrItemAlreadyAdded = errors.New("item is already added")
+	ErrInvalidQuantity  = errors.New("invalid quantity")
+	ErrItemNotFound     = errors.New("item not found")
 )
 
 type WarehouseService struct {
@@ -79,6 +78,9 @@ func (s *WarehouseService) AddItems(idempotenceKey string, itemID uuid.UUID, qua
 }
 
 func (s *WarehouseService) ReserveOrderItems(orderID uuid.UUID, itemsQuantity []domain.ItemQuantity) error {
+	if len(itemsQuantity) == 0 {
+		return nil
+	}
 	for _, item := range itemsQuantity {
 		if item.Quantity <= 0 {
 			return ErrInvalidQuantity
@@ -91,7 +93,7 @@ func (s *WarehouseService) ReserveOrderItems(orderID uuid.UUID, itemsQuantity []
 			return err
 		}
 		if len(ops) > 0 {
-			return ErrOrderOperationsAlreadyExist
+			return nil
 		}
 
 		itemIDs := make([]uuid.UUID, 0, len(itemsQuantity))
@@ -103,12 +105,13 @@ func (s *WarehouseService) ReserveOrderItems(orderID uuid.UUID, itemsQuantity []
 		if err != nil {
 			return err
 		}
-		if len(itemsQuantity) != len(actualQuantity) {
-			return ErrItemNotFound
-		}
 
-		if !s.checkAvailableItemsEnough(actualQuantity, itemsQuantity) {
-			return ErrItemsOutOfStock
+		if len(itemsQuantity) != len(actualQuantity) || !s.checkAvailableItemsEnough(actualQuantity, itemsQuantity) {
+			err := p.OrderAPI().NotifyItemsOutOfStock(orderID)
+			if err != nil {
+				return fmt.Errorf("failed to notify items out of stock: %w", err)
+			}
+			return nil
 		}
 
 		for _, item := range itemsQuantity {
@@ -124,9 +127,14 @@ func (s *WarehouseService) ReserveOrderItems(orderID uuid.UUID, itemsQuantity []
 				return err
 			}
 		}
+
+		err = p.OrderAPI().NotifyItemsReserved(orderID)
+		if err != nil {
+			return fmt.Errorf("failed to notify items reserved: %w", err)
+		}
 		return nil
 	})
-	if err != nil && !errors.Is(err, ErrOrderOperationsAlreadyExist) && !errors.Is(err, ErrItemNotFound) && !errors.Is(err, ErrItemsOutOfStock) {
+	if err != nil && !errors.Is(err, ErrItemNotFound) {
 		s.logger.WithError(err).With(log.Fields{"orderID": orderID}).Error("failed to reserve order items")
 	}
 	return err

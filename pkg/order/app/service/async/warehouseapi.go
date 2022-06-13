@@ -1,13 +1,7 @@
 package async
 
 import (
-	"errors"
 	"github.com/google/uuid"
-)
-
-var (
-	ErrOrderItemsOutOfStock        = errors.New("items out of stock")
-	ErrOrderOperationsAlreadyExist = errors.New("order items are already exist") // TOOD: delete
 )
 
 type ItemQuantity struct {
@@ -16,6 +10,6 @@ type ItemQuantity struct {
 }
 
 type WarehouseAPI interface {
-	ReserveOrderItems(orderID uuid.UUID, items []ItemQuantity) error
-	RemoveOrderItemsReservation(orderID uuid.UUID) error
+	ReserveItems(orderID uuid.UUID, items []ItemQuantity) error
+	RemoveItemsReservation(orderID uuid.UUID) error
 }

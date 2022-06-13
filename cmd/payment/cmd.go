@@ -75,6 +75,8 @@ func main() {
 		serviceName,
 		[]commonMessage.Handler{
 			message.NewAuthorizePaymentHandler(paymentService),
+			message.NewCompletePaymentHandler(paymentService),
+			message.NewCancelPaymentHandler(paymentService),
 		},
 		pulsarConn,
 		logger,

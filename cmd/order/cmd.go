@@ -5,10 +5,11 @@ import (
 	"errors"
 	"github.com/klwxsrx/arch-course-project/data/mysql/order"
 	"github.com/klwxsrx/arch-course-project/pkg/common/app/log"
-	"github.com/klwxsrx/arch-course-project/pkg/common/app/message"
+	commonMessage "github.com/klwxsrx/arch-course-project/pkg/common/app/message"
 	loggerImpl "github.com/klwxsrx/arch-course-project/pkg/common/infra/logger"
 	commonMysql "github.com/klwxsrx/arch-course-project/pkg/common/infra/mysql"
 	"github.com/klwxsrx/arch-course-project/pkg/common/infra/pulsar"
+	"github.com/klwxsrx/arch-course-project/pkg/order/app/message"
 	"github.com/klwxsrx/arch-course-project/pkg/order/app/persistence"
 	"github.com/klwxsrx/arch-course-project/pkg/order/app/service"
 	"github.com/klwxsrx/arch-course-project/pkg/order/infra/mysql"
@@ -18,6 +19,8 @@ import (
 	"os/signal"
 	"syscall"
 )
+
+const serviceName = "order"
 
 func main() {
 	logger := loggerImpl.New()
@@ -50,7 +53,7 @@ func main() {
 	messageSender := pulsar.NewMessageSender(pulsarConn)
 	defer messageSender.Close()
 
-	messageDispatcher := message.NewDispatcher(
+	messageDispatcher := commonMessage.NewDispatcher(
 		commonMysql.NewMessageStore(client),
 		messageSender,
 		commonMysql.NewSynchronization(client),
@@ -65,6 +68,22 @@ func main() {
 		unitOfWork,
 		logger,
 	)
+
+	subscriberCloser, err := pulsar.NewMessageSubscriber(
+		serviceName,
+		[]commonMessage.Handler{
+			message.NewPaymentAuthorizedHandler(orderService),
+			message.NewItemsReservedHandler(orderService),
+			message.NewItemsOutOfStockHandler(orderService),
+			message.NewPaymentCompletedHandler(orderService),
+		},
+		pulsarConn,
+		logger,
+	)
+	if err != nil {
+		logger.WithError(err).Fatal("failed to run message subscriber")
+	}
+	defer subscriberCloser()
 
 	server, err := startServer(orderService, logger)
 	if err != nil {

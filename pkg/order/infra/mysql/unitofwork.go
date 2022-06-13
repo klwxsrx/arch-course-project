@@ -34,7 +34,7 @@ func (p *persistentProvider) OrderRepository() domain.OrderRepository {
 }
 
 func (p *persistentProvider) IdempotenceKeyStore() idempotence.KeyStore {
-	return NewIdempotenceKeyStore(p.db)
+	return mysql.NewIdempotenceKeyStore(p.db)
 }
 
 func (p *persistentProvider) eventDispatcher(db mysql.Client) event.Dispatcher {

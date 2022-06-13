@@ -8,7 +8,6 @@ import (
 	"github.com/klwxsrx/arch-course-project/pkg/common/app/log"
 	"github.com/klwxsrx/arch-course-project/pkg/common/infra/transport"
 	"github.com/klwxsrx/arch-course-project/pkg/warehouse/app/service"
-	"github.com/klwxsrx/arch-course-project/pkg/warehouse/domain"
 	"net/http"
 )
 
@@ -32,18 +31,6 @@ func getRoutes() []route {
 			http.MethodPut,
 			"/warehouse/items",
 			addItemsHandler,
-		},
-		{
-			"reserveOrderItems",
-			http.MethodPost,
-			"/warehouse/order/{orderID}/reserve",
-			reserveOrderItemsHandler,
-		},
-		{
-			"deleteOrderItemsReservation",
-			http.MethodDelete,
-			"/warehouse/order/{orderID}/reserve",
-			deleteOrderItemsReservationHandler,
 		},
 		{
 			"health",
@@ -123,64 +110,6 @@ func addItemsHandler(srv *service.WarehouseService, w http.ResponseWriter, r *ht
 	}
 }
 
-func reserveOrderItemsHandler(srv *service.WarehouseService, w http.ResponseWriter, r *http.Request) {
-	orderID, err := parseUUID(mux.Vars(r)["orderID"])
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	var body []struct {
-		ItemID   uuid.UUID `json:"item_id"`
-		Quantity int       `json:"quantity"`
-	}
-
-	err = json.NewDecoder(r.Body).Decode(&body)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	items := make([]domain.ItemQuantity, 0, len(body))
-	for _, bodyItem := range body {
-		items = append(items, domain.ItemQuantity{
-			ItemID:   bodyItem.ItemID,
-			Quantity: bodyItem.Quantity,
-		})
-	}
-
-	err = srv.ReserveOrderItems(orderID, items)
-	switch err {
-	case service.ErrInvalidQuantity:
-		w.WriteHeader(http.StatusBadRequest)
-	case service.ErrOrderOperationsAlreadyExist:
-		w.WriteHeader(http.StatusConflict)
-	case service.ErrItemsOutOfStock:
-		w.WriteHeader(http.StatusMethodNotAllowed)
-	case service.ErrItemNotFound:
-		w.WriteHeader(http.StatusNotFound)
-	case nil:
-		w.WriteHeader(http.StatusNoContent)
-	default:
-		w.WriteHeader(http.StatusInternalServerError)
-	}
-}
-
-func deleteOrderItemsReservationHandler(srv *service.WarehouseService, w http.ResponseWriter, r *http.Request) {
-	orderID, err := parseUUID(mux.Vars(r)["orderID"])
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	err = srv.DeleteOrderItemsReservation(orderID)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	w.WriteHeader(http.StatusNoContent)
-}
-
 func healthCheckHandler(_ *service.WarehouseService, w http.ResponseWriter, _ *http.Request) {
 	_ = json.NewEncoder(w).Encode(struct {
 		Status string `json:"status"`
@@ -193,10 +122,6 @@ func parseIdempotenceKey(r *http.Request) (string, error) {
 		return "", errors.New("idempotence key not found")
 	}
 	return key, nil
-}
-
-func parseUUID(str string) (uuid.UUID, error) {
-	return uuid.Parse(str)
 }
 
 func getHandlerFunc(

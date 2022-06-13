@@ -74,7 +74,7 @@ func (s *OrderService) HandlePaymentAuthorized(orderID uuid.UUID) error {
 			return nil
 		}
 
-		err = updateOrderStatus(order, domain.OrderPaymentAuthorized, p.OrderRepository())
+		err = updateOrderStatus(order, domain.OrderStatusPaymentAuthorized, p.OrderRepository())
 		if err != nil {
 			return fmt.Errorf("failed to update order status: %w", err)
 		}
@@ -86,7 +86,7 @@ func (s *OrderService) HandlePaymentAuthorized(orderID uuid.UUID) error {
 				Quantity: orderItem.Quantity,
 			})
 		}
-		err = p.WarehouseAPI().ReserveOrderItems(order.ID, itemQuantity)
+		err = p.WarehouseAPI().ReserveItems(order.ID, itemQuantity)
 		if err != nil {
 			return fmt.Errorf("failed to reserve order items: %w", err)
 		}
@@ -97,6 +97,47 @@ func (s *OrderService) HandlePaymentAuthorized(orderID uuid.UUID) error {
 		s.logger.WithError(err).With(log.Fields{"orderID": orderID}).Error("failed to handle payment authorized")
 	}
 	return err
+}
+
+func (s *OrderService) HandleItemsReserved(orderID uuid.UUID) error {
+	// TODO
+	return nil
+}
+
+func (s *OrderService) HandleItemsOutOfStock(orderID uuid.UUID) error {
+	err := s.ufw.Execute(func(p persistence.PersistentProvider) error {
+		order, err := p.OrderRepository().GetByID(orderID)
+		if errors.Is(err, domain.ErrOrderNotFound) {
+			return errors.New("failed to get authorized order not found")
+		}
+		if err != nil {
+			return fmt.Errorf("failed to get authorized order: %w", err)
+		}
+
+		if order.Status != domain.OrderStatusPaymentAuthorized {
+			return nil
+		}
+
+		err = updateOrderStatus(order, domain.OrderStatusCancelled, p.OrderRepository())
+		if err != nil {
+			return fmt.Errorf("failed to update order status: %w", err)
+		}
+
+		err = p.PaymentAPI().CancelPayment(orderID)
+		if err != nil {
+			return fmt.Errorf("failed to cancel payment: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		s.logger.WithError(err).With(log.Fields{"orderID": orderID}).Error("failed to handle items out of stock")
+	}
+	return err
+}
+
+func (s *OrderService) HandlePaymentCompleted(orderID uuid.UUID) error {
+	// TODO
+	return nil
 }
 
 func createOrder(

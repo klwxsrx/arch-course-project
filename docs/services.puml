@@ -37,6 +37,8 @@ Cart --> Catalog: GET /products
 
 Cart ---> Order: PUT /orders
 
+note left: Асинхронное взаимодействие\n(используется Apache Pulsar)
+
 Order ...> Payment: AuthorizePayment\nCompletePayment\nCancelPayment
 
 Order <... Payment: PaymentAuthorized\nPaymentRejected\nPaymentCompleted\nPaymentCompletionRejected

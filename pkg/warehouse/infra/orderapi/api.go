@@ -5,7 +5,7 @@ import (
 	"errors"
 	"github.com/google/uuid"
 	"github.com/klwxsrx/arch-course-project/pkg/common/app/event"
-	"github.com/klwxsrx/arch-course-project/pkg/payment/app/service/async"
+	"github.com/klwxsrx/arch-course-project/pkg/warehouse/app/service/async"
 )
 
 const OrderEventTopicName = "order_event"
@@ -14,14 +14,14 @@ type api struct {
 	eventDispatcher event.Dispatcher
 }
 
-func (a *api) NotifyPaymentAuthorized(orderID uuid.UUID) error {
+func (a *api) NotifyItemsReserved(orderID uuid.UUID) error {
 	jsonID, err := json.Marshal(orderID)
 	if err != nil {
 		return errors.New("failed to encode orderID")
 	}
 
 	err = a.eventDispatcher.Dispatch(&event.Event{
-		Type:      "payment_authorized",
+		Type:      "items_reserved",
 		TopicName: OrderEventTopicName,
 		Key:       orderID.String(),
 		Body:      jsonID,
@@ -32,14 +32,14 @@ func (a *api) NotifyPaymentAuthorized(orderID uuid.UUID) error {
 	return nil
 }
 
-func (a *api) NotifyPaymentCompleted(orderID uuid.UUID) error {
+func (a *api) NotifyItemsOutOfStock(orderID uuid.UUID) error {
 	jsonID, err := json.Marshal(orderID)
 	if err != nil {
 		return errors.New("failed to encode orderID")
 	}
 
 	err = a.eventDispatcher.Dispatch(&event.Event{
-		Type:      "payment_completed",
+		Type:      "items_out_of_stock",
 		TopicName: OrderEventTopicName,
 		Key:       orderID.String(),
 		Body:      jsonID,

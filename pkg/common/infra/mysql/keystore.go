@@ -2,11 +2,10 @@ package mysql
 
 import (
 	"github.com/klwxsrx/arch-course-project/pkg/common/app/idempotence"
-	"github.com/klwxsrx/arch-course-project/pkg/common/infra/mysql"
 )
 
 type idempotenceKeyStore struct {
-	client mysql.Client
+	client Client
 }
 
 func (s *idempotenceKeyStore) StoreUnique(key string) error {
@@ -24,6 +23,6 @@ func (s *idempotenceKeyStore) StoreUnique(key string) error {
 	return nil
 }
 
-func NewIdempotenceKeyStore(client mysql.Client) idempotence.KeyStore {
+func NewIdempotenceKeyStore(client Client) idempotence.KeyStore {
 	return &idempotenceKeyStore{client: client}
 }

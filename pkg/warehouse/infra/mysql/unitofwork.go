@@ -2,11 +2,13 @@ package mysql
 
 import (
 	"fmt"
+	"github.com/klwxsrx/arch-course-project/pkg/common/app/event"
 	"github.com/klwxsrx/arch-course-project/pkg/common/app/idempotence"
 	"github.com/klwxsrx/arch-course-project/pkg/common/infra/mysql"
-	mysql2 "github.com/klwxsrx/arch-course-project/pkg/order/infra/mysql"
 	"github.com/klwxsrx/arch-course-project/pkg/warehouse/app/persistence"
+	"github.com/klwxsrx/arch-course-project/pkg/warehouse/app/service/async"
 	"github.com/klwxsrx/arch-course-project/pkg/warehouse/domain"
+	"github.com/klwxsrx/arch-course-project/pkg/warehouse/infra/orderapi"
 )
 
 type persistentProvider struct {
@@ -18,7 +20,15 @@ func (p *persistentProvider) Stock() domain.Stock {
 }
 
 func (p *persistentProvider) IdempotenceKeyStore() idempotence.KeyStore {
-	return mysql2.NewIdempotenceKeyStore(p.db)
+	return mysql.NewIdempotenceKeyStore(p.db)
+}
+
+func (p *persistentProvider) OrderAPI() async.OrderAPI {
+	return orderapi.New(p.eventDispatcher(p.db))
+}
+
+func (p *persistentProvider) eventDispatcher(db mysql.Client) event.Dispatcher {
+	return event.NewDispatcher(mysql.NewMessageStore(db))
 }
 
 type unitOfWork struct {

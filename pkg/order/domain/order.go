@@ -9,9 +9,9 @@ type OrderStatus int
 
 const (
 	OrderStatusCreated OrderStatus = iota
-	OrderPaymentAuthorized
-	OrderItemsReserved
-	OrderDeliveryScheduled
+	OrderStatusPaymentAuthorized
+	OrderStatusItemsReserved
+	OrderStatusDeliveryScheduled
 	OrderStatusAwaitingDelivery
 	OrderStatusProcessingDelivery
 	OrderStatusDelivered
