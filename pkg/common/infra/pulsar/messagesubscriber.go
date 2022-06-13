@@ -104,6 +104,8 @@ func (s *MessageSubscriber) processMessage(msg *pulsar.ConsumerMessage) {
 		msg.Consumer.Nack(msg)
 		return
 	}
+
+	s.logger.Info(fmt.Sprintf("handled message %s: with key %s", typ, msg.Key()))
 	msg.Consumer.Ack(msg)
 }
 

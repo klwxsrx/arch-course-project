@@ -8,7 +8,7 @@ import (
 	"github.com/klwxsrx/arch-course-project/pkg/order/app/service/async"
 )
 
-const WarehouseMessageTopicName = "warehouse_event"
+const warehouseEventTopicName = "warehouse_event"
 
 type apiClient struct {
 	eventDispatcher event.Dispatcher
@@ -42,7 +42,7 @@ func (a *apiClient) ReserveItems(orderID uuid.UUID, items []async.ItemQuantity) 
 
 	err = a.eventDispatcher.Dispatch(&event.Event{
 		Type:      "reserve_items",
-		TopicName: WarehouseMessageTopicName,
+		TopicName: warehouseEventTopicName,
 		Key:       orderID.String(),
 		Body:      jsonBody,
 	})
@@ -60,7 +60,7 @@ func (a *apiClient) RemoveItemsReservation(orderID uuid.UUID) error {
 
 	err = a.eventDispatcher.Dispatch(&event.Event{
 		Type:      "remove_items_reservation",
-		TopicName: WarehouseMessageTopicName,
+		TopicName: warehouseEventTopicName,
 		Key:       orderID.String(),
 		Body:      jsonID,
 	})

@@ -65,10 +65,10 @@ func (s *OrderService) HandlePaymentAuthorized(orderID uuid.UUID) error {
 	err := s.ufw.Execute(func(p persistence.PersistentProvider) error {
 		order, err := p.OrderRepository().GetByID(orderID)
 		if errors.Is(err, domain.ErrOrderNotFound) {
-			return errors.New("failed to get authorized order not found")
+			return errors.New("failed to get order not found")
 		}
 		if err != nil {
-			return fmt.Errorf("failed to get authorized order: %w", err)
+			return fmt.Errorf("failed to get order: %w", err)
 		}
 		if order.Status != domain.OrderStatusCreated {
 			return nil
@@ -100,18 +100,45 @@ func (s *OrderService) HandlePaymentAuthorized(orderID uuid.UUID) error {
 }
 
 func (s *OrderService) HandleItemsReserved(orderID uuid.UUID) error {
-	// TODO
-	return nil
+	err := s.ufw.Execute(func(p persistence.PersistentProvider) error {
+		order, err := p.OrderRepository().GetByID(orderID)
+		if errors.Is(err, domain.ErrOrderNotFound) {
+			return errors.New("failed to get order not found")
+		}
+		if err != nil {
+			return fmt.Errorf("failed to get order: %w", err)
+		}
+
+		if order.Status != domain.OrderStatusPaymentAuthorized {
+			return nil
+		}
+
+		err = updateOrderStatus(order, domain.OrderStatusItemsReserved, p.OrderRepository())
+		if err != nil {
+			return fmt.Errorf("failed to update order status: %w", err)
+		}
+
+		err = p.DeliveryAPI().ScheduleDelivery(order.ID, order.AddressID)
+		if err != nil {
+			return fmt.Errorf("failed to schedule delivery: %w", err)
+		}
+
+		return nil
+	})
+	if err != nil {
+		s.logger.WithError(err).With(log.Fields{"orderID": orderID}).Error("failed to handle items reserved")
+	}
+	return err
 }
 
 func (s *OrderService) HandleItemsOutOfStock(orderID uuid.UUID) error {
 	err := s.ufw.Execute(func(p persistence.PersistentProvider) error {
 		order, err := p.OrderRepository().GetByID(orderID)
 		if errors.Is(err, domain.ErrOrderNotFound) {
-			return errors.New("failed to get authorized order not found")
+			return errors.New("failed to get order not found")
 		}
 		if err != nil {
-			return fmt.Errorf("failed to get authorized order: %w", err)
+			return fmt.Errorf("failed to get order: %w", err)
 		}
 
 		if order.Status != domain.OrderStatusPaymentAuthorized {
@@ -135,9 +162,103 @@ func (s *OrderService) HandleItemsOutOfStock(orderID uuid.UUID) error {
 	return err
 }
 
+func (s *OrderService) HandleDeliveryScheduled(orderID uuid.UUID) error {
+	err := s.ufw.Execute(func(p persistence.PersistentProvider) error {
+		order, err := p.OrderRepository().GetByID(orderID)
+		if errors.Is(err, domain.ErrOrderNotFound) {
+			return errors.New("failed to get order not found")
+		}
+		if err != nil {
+			return fmt.Errorf("failed to get order: %w", err)
+		}
+
+		if order.Status != domain.OrderStatusItemsReserved {
+			return nil
+		}
+
+		err = updateOrderStatus(order, domain.OrderStatusDeliveryScheduled, p.OrderRepository())
+		if err != nil {
+			return fmt.Errorf("failed to update order status: %w", err)
+		}
+
+		err = p.PaymentAPI().CompleteTransaction(orderID)
+		if err != nil {
+			return fmt.Errorf("failed to complete transaction: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		s.logger.WithError(err).With(log.Fields{"orderID": orderID}).Error("failed to handle delivery scheduled")
+	}
+	return err
+}
+
 func (s *OrderService) HandlePaymentCompleted(orderID uuid.UUID) error {
-	// TODO
-	return nil
+	err := s.ufw.Execute(func(p persistence.PersistentProvider) error {
+		order, err := p.OrderRepository().GetByID(orderID)
+		if errors.Is(err, domain.ErrOrderNotFound) {
+			return errors.New("failed to get order not found")
+		}
+		if err != nil {
+			return fmt.Errorf("failed to get order: %w", err)
+		}
+
+		if order.Status != domain.OrderStatusDeliveryScheduled {
+			return nil
+		}
+
+		err = updateOrderStatus(order, domain.OrderStatusSentToDelivery, p.OrderRepository())
+		if err != nil {
+			return fmt.Errorf("failed to update order status: %w", err)
+		}
+
+		err = p.DeliveryAPI().ProcessDelivery(order.ID)
+		if err != nil {
+			return fmt.Errorf("failed to process delivery: %w", err)
+		}
+
+		return nil
+	})
+	if err != nil {
+		s.logger.WithError(err).With(log.Fields{"orderID": orderID}).Error("failed to handle payment completed")
+	}
+	return err
+}
+
+func (s *OrderService) HandlePaymentCompletionRejected(orderID uuid.UUID) error {
+	err := s.ufw.Execute(func(p persistence.PersistentProvider) error {
+		order, err := p.OrderRepository().GetByID(orderID)
+		if errors.Is(err, domain.ErrOrderNotFound) {
+			return errors.New("failed to get order not found")
+		}
+		if err != nil {
+			return fmt.Errorf("failed to get order: %w", err)
+		}
+
+		if order.Status != domain.OrderStatusDeliveryScheduled {
+			return nil
+		}
+
+		err = updateOrderStatus(order, domain.OrderStatusCancelled, p.OrderRepository())
+		if err != nil {
+			return fmt.Errorf("failed to update order status: %w", err)
+		}
+
+		err = p.DeliveryAPI().CancelDeliverySchedule(orderID)
+		if err != nil {
+			return fmt.Errorf("failed to cancel delivery schedule: %w", err)
+		}
+		err = p.WarehouseAPI().RemoveItemsReservation(orderID)
+		if err != nil {
+			return fmt.Errorf("failed to remove items reservation: %w", err)
+		}
+
+		return nil
+	})
+	if err != nil {
+		s.logger.WithError(err).With(log.Fields{"orderID": orderID}).Error("failed to handle payment completion rejected")
+	}
+	return err
 }
 
 func createOrder(

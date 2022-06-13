@@ -5,8 +5,12 @@ import (
 	"errors"
 	"github.com/klwxsrx/arch-course-project/data/mysql/delivery"
 	"github.com/klwxsrx/arch-course-project/pkg/common/app/log"
+	commonMessage "github.com/klwxsrx/arch-course-project/pkg/common/app/message"
 	loggerImpl "github.com/klwxsrx/arch-course-project/pkg/common/infra/logger"
 	commonMysql "github.com/klwxsrx/arch-course-project/pkg/common/infra/mysql"
+	"github.com/klwxsrx/arch-course-project/pkg/common/infra/pulsar"
+	"github.com/klwxsrx/arch-course-project/pkg/delivery/app/message"
+	"github.com/klwxsrx/arch-course-project/pkg/delivery/app/persistence"
 	"github.com/klwxsrx/arch-course-project/pkg/delivery/app/query"
 	"github.com/klwxsrx/arch-course-project/pkg/delivery/app/service"
 	"github.com/klwxsrx/arch-course-project/pkg/delivery/infra/mysql"
@@ -16,6 +20,8 @@ import (
 	"os/signal"
 	"syscall"
 )
+
+const serviceName = "delivery"
 
 func main() {
 	logger := loggerImpl.New()
@@ -40,13 +46,46 @@ func main() {
 		logger.WithError(err).Fatal("failed to execute db migration")
 	}
 
+	pulsarConn, err := pulsar.NewConnection(config.MessageBrokerAddress, logger)
+	if err != nil {
+		logger.WithError(err).Fatal("failed to setup message broker connection")
+	}
+
+	messageSender := pulsar.NewMessageSender(pulsarConn)
+	defer messageSender.Close()
+
+	messageDispatcher := commonMessage.NewDispatcher(
+		commonMysql.NewMessageStore(client),
+		messageSender,
+		commonMysql.NewSynchronization(client),
+		logger,
+	)
+	defer messageDispatcher.Close()
+	messageDispatcher.Dispatch()
+
 	unitOfWork := mysql.NewUnitOfWork(client)
+	unitOfWork = persistence.NewUnitOfWorkCompleteNotifier(unitOfWork, messageDispatcher.Dispatch)
 	deliveryService := service.NewDeliveryService(
 		unitOfWork,
 		logger,
 	)
 
 	deliveryQueryService := mysql.NewQueryService(client)
+
+	subscriberCloser, err := pulsar.NewMessageSubscriber(
+		serviceName,
+		[]commonMessage.Handler{
+			message.NewScheduleDeliveryHandler(deliveryService),
+			message.NewCancelDeliveryScheduleHandler(deliveryService),
+			message.NewProcessDeliveryHandler(deliveryService),
+		},
+		pulsarConn,
+		logger,
+	)
+	if err != nil {
+		logger.WithError(err).Fatal("failed to run message subscriber")
+	}
+	defer subscriberCloser()
 
 	server, err := startServer(deliveryService, deliveryQueryService, logger)
 	if err != nil {
@@ -83,7 +122,7 @@ func startServer(service *service.DeliveryService, query query.Service, logger l
 		return nil, err
 	}
 	srv := &http.Server{
-		Addr:    ":8080",
+		Addr:    ":8083", // TODO: 8080
 		Handler: handler,
 	}
 	go func() {

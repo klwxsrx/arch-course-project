@@ -8,7 +8,7 @@ import (
 	"github.com/klwxsrx/arch-course-project/pkg/order/app/service/async"
 )
 
-const PaymentEventTopicName = "payment_event"
+const paymentEventTopicName = "payment_event"
 
 type apiClient struct {
 	eventDispatcher event.Dispatcher
@@ -29,7 +29,7 @@ func (a *apiClient) AuthorizeOrder(orderID uuid.UUID, totalAmount int) error {
 
 	err = a.eventDispatcher.Dispatch(&event.Event{
 		Type:      "authorize_payment",
-		TopicName: PaymentEventTopicName,
+		TopicName: paymentEventTopicName,
 		Key:       orderID.String(),
 		Body:      createPaymentJSON,
 	})
@@ -47,7 +47,7 @@ func (a *apiClient) CompleteTransaction(orderID uuid.UUID) error {
 
 	err = a.eventDispatcher.Dispatch(&event.Event{
 		Type:      "complete_payment",
-		TopicName: PaymentEventTopicName,
+		TopicName: paymentEventTopicName,
 		Key:       orderID.String(),
 		Body:      orderIDJSON,
 	})
@@ -65,7 +65,7 @@ func (a *apiClient) CancelPayment(orderID uuid.UUID) error {
 
 	err = a.eventDispatcher.Dispatch(&event.Event{
 		Type:      "cancel_payment",
-		TopicName: PaymentEventTopicName,
+		TopicName: paymentEventTopicName,
 		Key:       orderID.String(),
 		Body:      orderIDJSON,
 	})

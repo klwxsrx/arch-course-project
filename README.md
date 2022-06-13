@@ -48,7 +48,7 @@
 
 ![docs/purchase_process.puml](http://www.plantuml.com/plantuml/proxy?fmt=svg&src=https://raw.githubusercontent.com/klwxsrx/arch-course-project/master/docs/purchase_process.puml)
 
-Сервис `Order` является оркестратором процесса, реализует паттерн Saga. В случае провала на каком-либо шаге все
+Сервис `Order` является оркестратором процесса проведения платежа, реализует паттерн Saga. В случае провала на каком-либо шаге все
 предыдущие действия откатятся.
 
 # Установка

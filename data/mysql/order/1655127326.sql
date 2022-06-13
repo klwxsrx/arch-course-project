@@ -1,6 +1,6 @@
 CREATE TABLE `order_item`
 (
-    id       BINARY(16) PRIMARY KEY,
+    id       BINARY(16),
     order_id BINARY(16),
     price    BIGINT,
     quantity INT,

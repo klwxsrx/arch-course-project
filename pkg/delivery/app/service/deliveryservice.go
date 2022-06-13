@@ -2,14 +2,11 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"github.com/google/uuid"
 	"github.com/klwxsrx/arch-course-project/pkg/common/app/log"
 	"github.com/klwxsrx/arch-course-project/pkg/delivery/app/persistence"
 	"github.com/klwxsrx/arch-course-project/pkg/delivery/domain"
-)
-
-var (
-	ErrDeliveryIsNotScheduled = errors.New("delivery doesn't have scheduled status")
 )
 
 type DeliveryService struct {
@@ -33,7 +30,16 @@ func (s *DeliveryService) Schedule(orderID uuid.UUID, addressID uuid.UUID) error
 			Address: s.getAddress(addressID),
 		}
 
-		return p.DeliveryRepository().Store(delivery)
+		err = p.DeliveryRepository().Store(delivery)
+		if err != nil {
+			return fmt.Errorf("failed to store scheduled delivery: %w", err)
+		}
+
+		err = p.OrderAPI().NotifyDeliveryScheduled(orderID)
+		if err != nil {
+			return fmt.Errorf("failed to store scheduled delivery: %w", err)
+		}
+		return nil
 	})
 	if err != nil {
 		s.logger.WithError(err).With(log.Fields{
@@ -51,17 +57,14 @@ func (s *DeliveryService) CancelSchedule(orderID uuid.UUID) error {
 			return err
 		}
 
-		if delivery.Status == domain.DeliveryStatusCancelled {
-			return nil
-		}
 		if delivery.Status != domain.DeliveryStatusScheduled {
-			return ErrDeliveryIsNotScheduled
+			return nil
 		}
 
 		delivery.Status = domain.DeliveryStatusCancelled
 		return p.DeliveryRepository().Store(delivery)
 	})
-	if err != nil && !errors.Is(err, ErrDeliveryIsNotScheduled) {
+	if err != nil {
 		s.logger.WithError(err).With(log.Fields{
 			"orderID": orderID,
 		}).Error("failed to delete delivery schedule")
@@ -69,7 +72,29 @@ func (s *DeliveryService) CancelSchedule(orderID uuid.UUID) error {
 	return err
 }
 
-func (s *DeliveryService) getAddress(addressID uuid.UUID) string {
+func (s *DeliveryService) ProcessDelivery(orderID uuid.UUID) error {
+	err := s.ufw.Execute(func(p persistence.PersistentProvider) error {
+		delivery, err := p.DeliveryRepository().GetByID(orderID)
+		if err != nil {
+			return err
+		}
+
+		if delivery.Status != domain.DeliveryStatusScheduled {
+			return nil
+		}
+
+		delivery.Status = domain.DeliveryStatusAwaitingDelivery
+		return p.DeliveryRepository().Store(delivery)
+	})
+	if err != nil {
+		s.logger.WithError(err).With(log.Fields{
+			"orderID": orderID,
+		}).Error("failed to process delivery")
+	}
+	return err
+}
+
+func (s *DeliveryService) getAddress(_ uuid.UUID) string {
 	return "Санкт-Петербург, пр. Тореза, дом 30, подъезд 1, кв. 10" // TODO: store address from database
 }
 

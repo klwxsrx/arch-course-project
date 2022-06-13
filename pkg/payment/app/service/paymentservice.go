@@ -61,6 +61,8 @@ func (s *PaymentService) AuthorizePayment(orderID uuid.UUID, totalAmount int) er
 func (s *PaymentService) CompletePayment(orderID uuid.UUID) error {
 	// TODO: complete payment from payment gateway
 
+	const testFailedCompletion = false // test rollback at last saga's stage
+
 	err := s.ufw.Execute(func(p persistence.PersistentProvider) error {
 		payment, err := p.PaymentRepository().GetByID(orderID)
 		if errors.Is(err, domain.ErrPaymentNotFound) {
@@ -79,7 +81,17 @@ func (s *PaymentService) CompletePayment(orderID uuid.UUID) error {
 			return fmt.Errorf("failed to store completed payment: %w", err)
 		}
 
-		err = p.OrderAPI().NotifyPaymentCompleted(orderID)
+		if testFailedCompletion {
+			err = p.OrderAPI().NotifyPaymentCompletionRejected(orderID)
+			if err != nil {
+				return fmt.Errorf("failed to store completed payment: %w", err)
+			}
+
+			payment.Status = domain.PaymentStatusRejected
+			err = p.PaymentRepository().Store(payment)
+		} else {
+			err = p.OrderAPI().NotifyPaymentCompleted(orderID)
+		}
 		if err != nil {
 			return fmt.Errorf("failed to notify payment completion: %w", err)
 		}

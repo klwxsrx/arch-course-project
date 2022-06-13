@@ -12,7 +12,7 @@ const (
 	OrderStatusPaymentAuthorized
 	OrderStatusItemsReserved
 	OrderStatusDeliveryScheduled
-	OrderStatusAwaitingDelivery
+	OrderStatusSentToDelivery
 	OrderStatusProcessingDelivery
 	OrderStatusDelivered
 	OrderStatusCancelled

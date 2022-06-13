@@ -29,18 +29,6 @@ func getRoutes() []route {
 			getDeliveryHandler,
 		},
 		{
-			"scheduleDelivery",
-			http.MethodPost,
-			"/delivery/{orderID}/schedule",
-			scheduleDeliveryHandler,
-		},
-		{
-			"cancelDeliverySchedule",
-			http.MethodDelete,
-			"/delivery/{orderID}/schedule",
-			cancelDeliveryScheduleHandler,
-		},
-		{
 			"health",
 			http.MethodGet,
 			"/healthz",
@@ -92,52 +80,6 @@ func getDeliveryHandler(_ *service.DeliveryService, qs query.Service, w http.Res
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-}
-
-func scheduleDeliveryHandler(srv *service.DeliveryService, _ query.Service, w http.ResponseWriter, r *http.Request) {
-	orderID, err := parseUUID(mux.Vars(r)["orderID"])
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	addressBody := struct {
-		AddressID uuid.UUID `json:"address_id"`
-	}{}
-
-	err = json.NewDecoder(r.Body).Decode(&addressBody)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	err = srv.Schedule(orderID, addressBody.AddressID)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusNoContent)
-}
-
-func cancelDeliveryScheduleHandler(srv *service.DeliveryService, _ query.Service, w http.ResponseWriter, r *http.Request) {
-	orderID, err := parseUUID(mux.Vars(r)["orderID"])
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	err = srv.CancelSchedule(orderID)
-	if errors.Is(err, service.ErrDeliveryIsNotScheduled) {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusNoContent)
 }
 
 func healthCheckHandler(_ *service.DeliveryService, _ query.Service, w http.ResponseWriter, _ *http.Request) {

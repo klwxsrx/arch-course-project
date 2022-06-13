@@ -121,7 +121,7 @@ func startServer(paymentService *service.PaymentService, paymentQueryService que
 		return nil, err
 	}
 	srv := &http.Server{
-		Addr:    ":8080",
+		Addr:    ":8081", // TODO: 8080
 		Handler: handler,
 	}
 	go func() {

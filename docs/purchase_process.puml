@@ -23,11 +23,19 @@ deactivate Delivery
 Order -> Payment: CompletePayment
 activate Payment
 
-alt #lightgreen Успешное подтверждение платежа
+alt #lightgreen Успешное подтверждение платежа\n(Последний этап саги проведения платежа)
 
 Order <-- Payment: OK
 
-else #lightpink Откат операций
+Order -> Delivery: ProcessDelivery
+activate Delivery
+
+Delivery -> Delivery: Сборка зарезервированного товара\nОтправка заказа
+
+Delivery -> Order: OrderDelivered
+deactivate Delivery
+
+else #lightpink Не удалось завершить платеж\n(Откат всех предыдущих операций)
 
 Order <-- Payment: ERROR
 deactivate Payment
