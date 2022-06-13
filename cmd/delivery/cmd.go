@@ -122,7 +122,7 @@ func startServer(service *service.DeliveryService, query query.Service, logger l
 		return nil, err
 	}
 	srv := &http.Server{
-		Addr:    ":8083", // TODO: 8080
+		Addr:    ":8080",
 		Handler: handler,
 	}
 	go func() {

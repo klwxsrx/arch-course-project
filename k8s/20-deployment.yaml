@@ -180,12 +180,6 @@ spec:
         - name: order
           image: klwxsrx/arch-course-order-service
           env:
-            - name: PAYMENT_SERVICE_URL
-              value: http://payment.arch-course.svc.cluster.local:8080
-            - name: WAREHOUSE_SERVICE_URL
-              value: http://warehouse.arch-course.svc.cluster.local:8080
-            - name: DELIVERY_SERVICE_URL
-              value: http://delivery.arch-course.svc.cluster.local:8080
             - name: DATABASE_HOST
               valueFrom:
                 configMapKeyRef:
@@ -211,6 +205,11 @@ spec:
                 secretKeyRef:
                   name: order-db-access
                   key: mysql-password
+            - name: MESSAGE_BROKER_ADDRESS
+              valueFrom:
+                configMapKeyRef:
+                  name: order-config
+                  key: pulsar-address
           ports:
             - name: web
               containerPort: 8080
@@ -265,6 +264,11 @@ spec:
                 secretKeyRef:
                   name: payment-db-access
                   key: mysql-password
+            - name: MESSAGE_BROKER_ADDRESS
+              valueFrom:
+                configMapKeyRef:
+                  name: payment-config
+                  key: pulsar-address
           ports:
             - name: web
               containerPort: 8080
@@ -319,6 +323,11 @@ spec:
                 secretKeyRef:
                   name: warehouse-db-access
                   key: mysql-password
+            - name: MESSAGE_BROKER_ADDRESS
+              valueFrom:
+                configMapKeyRef:
+                  name: warehouse-config
+                  key: pulsar-address
           ports:
             - name: web
               containerPort: 8080
@@ -373,6 +382,11 @@ spec:
                 secretKeyRef:
                   name: delivery-db-access
                   key: mysql-password
+            - name: MESSAGE_BROKER_ADDRESS
+              valueFrom:
+                configMapKeyRef:
+                  name: delivery-config
+                  key: pulsar-address
           ports:
             - name: web
               containerPort: 8080

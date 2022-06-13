@@ -48,8 +48,8 @@
 
 ![docs/purchase_process.puml](http://www.plantuml.com/plantuml/proxy?fmt=svg&src=https://raw.githubusercontent.com/klwxsrx/arch-course-project/master/docs/purchase_process.puml)
 
-Сервис `Order` является оркестратором процесса проведения платежа, реализует паттерн Saga. В случае провала на каком-либо шаге все
-предыдущие действия откатятся.
+Сервис `Order` является оркестратором процесса проведения платежа, реализует паттерн Saga. В случае провала на
+каком-либо шаге все предыдущие действия откатятся.
 
 # Установка
 
@@ -109,8 +109,8 @@ helm install \
 kubectl apply -f ./k8s
 ```
 
-# Запуск тестов
+# Коллекция тестов Postman
 
-```shell
-newman run --env-var="baseUrl=arch.homework" ./full_case.postman_collection.json
-```
+См. файл `full_case.postman_collection.json`.
+
+Поскольку обработка заказа осуществляется асинхронно, то методы проверяющие состояние заказа/платежа/товаров на складе нужно выполнять вручную с небольшой заджержкой после метода создания заказа.
