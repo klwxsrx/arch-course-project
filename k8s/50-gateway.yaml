@@ -57,6 +57,15 @@ spec:
         - name: user-auth
           namespace: arch-course
     - kind: Rule
+      match: PathPrefix(`/web/order`)
+      services:
+        - name: order
+          namespace: arch-course
+          port: 8080
+      middlewares:
+        - name: user-auth
+          namespace: arch-course
+    - kind: Rule
       match: PathPrefix(`/order`)
       services:
         - name: order

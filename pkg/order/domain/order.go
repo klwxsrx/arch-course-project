@@ -13,7 +13,6 @@ const (
 	OrderStatusItemsReserved
 	OrderStatusDeliveryScheduled
 	OrderStatusSentToDelivery
-	OrderStatusProcessingDelivery
 	OrderStatusDelivered
 	OrderStatusCancelled
 )

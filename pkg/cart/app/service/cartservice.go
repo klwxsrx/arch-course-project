@@ -13,7 +13,6 @@ var (
 	ErrInvalidQuantity   = errors.New("invalid product quantity")
 	ErrInvalidProduct    = errors.New("invalid product id")
 	ErrEmptyCartCheckout = errors.New("user has empty cart to checkout")
-	ErrCheckoutRejected  = errors.New("checkout rejected")
 )
 
 type CartService struct {
@@ -101,19 +100,15 @@ func (s *CartService) Checkout(userID, addressID uuid.UUID) (uuid.UUID, error) {
 			return ErrEmptyCartCheckout
 		}
 
-		var success bool
-		orderID, success, err = s.createOrder(cart, userID, addressID)
+		orderID, err = s.createOrder(cart, userID, addressID)
 		if err != nil {
 			return fmt.Errorf("failed to checkout: %w", err)
-		}
-		if !success {
-			return ErrCheckoutRejected
 		}
 
 		_ = s.repo.Delete(userID)
 		return nil
 	}()
-	if errors.Is(err, ErrCheckoutRejected) || errors.Is(err, ErrEmptyCartCheckout) {
+	if errors.Is(err, ErrEmptyCartCheckout) {
 		return orderID, err
 	}
 	if err != nil {
@@ -133,7 +128,7 @@ func (s *CartService) validateProductID(id uuid.UUID) error {
 	return err
 }
 
-func (s *CartService) createOrder(cart *domain.Cart, userID, addressID uuid.UUID) (uuid.UUID, bool, error) {
+func (s *CartService) createOrder(cart *domain.Cart, userID, addressID uuid.UUID) (uuid.UUID, error) {
 	productIDs := make([]uuid.UUID, 0, len(cart.Products))
 	for _, product := range cart.Products {
 		productIDs = append(productIDs, product.ID)
@@ -141,22 +136,19 @@ func (s *CartService) createOrder(cart *domain.Cart, userID, addressID uuid.UUID
 
 	products, err := s.catalogAPI.GetProducts(productIDs)
 	if err != nil {
-		return uuid.UUID{}, false, fmt.Errorf("failed to get products for checkout: %w", err)
+		return uuid.UUID{}, fmt.Errorf("failed to get products for checkout: %w", err)
 	}
 
 	orderData, err := s.createOrderData(userID, addressID, cart, products)
 	if err != nil {
-		return uuid.UUID{}, false, err
+		return uuid.UUID{}, err
 	}
 
 	orderID, err := s.orderAPI.CreateOrder(orderData)
-	if errors.Is(err, api.ErrOrderRejected) {
-		return orderID, false, nil
-	}
 	if err != nil {
-		return uuid.UUID{}, false, fmt.Errorf("failed to create order: %w", err)
+		return uuid.UUID{}, fmt.Errorf("failed to create order: %w", err)
 	}
-	return orderID, true, nil
+	return orderID, nil
 }
 
 func (s *CartService) createOrderData(userID, addressID uuid.UUID, cart *domain.Cart, products []api.Product) (*api.CreateOrderData, error) {

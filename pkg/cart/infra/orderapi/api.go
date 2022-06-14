@@ -64,20 +64,13 @@ func (c *apiClient) CreateOrder(data *api.CreateOrderData) (uuid.UUID, error) {
 		return uuid.UUID{}, fmt.Errorf("failed to createOrder, httpCode: %v", resp.StatusCode)
 	}
 
-	var result struct {
-		OrderID uuid.UUID `json:"order_id"`
-		Success bool      `json:"success"`
-	}
-
-	err = json.NewDecoder(resp.Body).Decode(&result)
+	var orderID uuid.UUID
+	err = json.NewDecoder(resp.Body).Decode(&orderID)
 	if err != nil {
 		return uuid.UUID{}, fmt.Errorf("failed to decode createOrder response: %w", err)
 	}
 
-	if !result.Success {
-		return result.OrderID, api.ErrOrderRejected
-	}
-	return result.OrderID, nil
+	return orderID, nil
 }
 
 func New(serviceURL string) api.OrderAPI {

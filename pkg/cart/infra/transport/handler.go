@@ -157,9 +157,6 @@ func checkoutHandler(srv *service.CartService, w http.ResponseWriter, r *http.Re
 	case errors.Is(err, service.ErrEmptyCartCheckout):
 		w.WriteHeader(http.StatusNotFound)
 		return
-	case errors.Is(err, service.ErrCheckoutRejected):
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
 	case err != nil:
 		w.WriteHeader(http.StatusInternalServerError)
 		return

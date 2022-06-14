@@ -11,6 +11,7 @@ import (
 	"github.com/klwxsrx/arch-course-project/pkg/common/infra/pulsar"
 	"github.com/klwxsrx/arch-course-project/pkg/order/app/message"
 	"github.com/klwxsrx/arch-course-project/pkg/order/app/persistence"
+	"github.com/klwxsrx/arch-course-project/pkg/order/app/query"
 	"github.com/klwxsrx/arch-course-project/pkg/order/app/service"
 	"github.com/klwxsrx/arch-course-project/pkg/order/infra/mysql"
 	"github.com/klwxsrx/arch-course-project/pkg/order/infra/transport"
@@ -87,7 +88,8 @@ func main() {
 	}
 	defer subscriberCloser()
 
-	server, err := startServer(orderService, logger)
+	queryService := mysql.NewOrderQueryService(client)
+	server, err := startServer(orderService, queryService, logger)
 	if err != nil {
 		logger.WithError(err).Fatal("failed to start server")
 	}
@@ -116,8 +118,8 @@ func getDatabaseClient(config *config, logger log.Logger) (commonMysql.Connectio
 	return db, client, nil
 }
 
-func startServer(orderService *service.OrderService, logger log.Logger) (*http.Server, error) {
-	handler, err := transport.NewHTTPHandler(orderService, logger)
+func startServer(orderService *service.OrderService, queryService query.Service, logger log.Logger) (*http.Server, error) {
+	handler, err := transport.NewHTTPHandler(orderService, queryService, logger)
 	if err != nil {
 		return nil, err
 	}
