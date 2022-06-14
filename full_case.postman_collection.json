@@ -801,7 +801,7 @@
 							"    let result = pm.response.json()",
 							"",
 							"    pm.expect(result).to.have.property('status');",
-							"    pm.expect(result.status).to.eql(\"scheduled\");",
+							"    pm.expect(result.status).to.eql(\"awaiting_delivery\");",
 							"});"
 						],
 						"type": "text/javascript"

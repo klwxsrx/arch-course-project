@@ -51,7 +51,7 @@ func (s *MessageSubscriber) runConsumerIfDoesntExist(topic string) error {
 	}
 
 	c, err := s.conn.Subscribe(&ConsumerConfig{
-		TopicsPattern:    topic,
+		Topic:            topic,
 		SubscriptionName: s.subscriberName,
 	})
 	if err != nil {
