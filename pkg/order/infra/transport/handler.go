@@ -13,6 +13,8 @@ import (
 	"net/http"
 )
 
+const healthEndpoint = "/healthz"
+
 type createOrderItemData struct {
 	ID        uuid.UUID `json:"id"`
 	ItemPrice int       `json:"item_price"`
@@ -49,7 +51,7 @@ func getRoutes() []route {
 		{
 			"health",
 			http.MethodGet,
-			"/healthz",
+			healthEndpoint,
 			healthCheckHandler,
 		},
 	}
@@ -218,6 +220,6 @@ func NewHTTPHandler(orderService *service.OrderService, queryService query.Servi
 			HandlerFunc(getHandlerFunc(orderService, queryService, route.Handler))
 	}
 
-	router.Use(transport.NewLoggingMiddleware(logger))
+	router.Use(transport.NewLoggingMiddleware(logger, []string{healthEndpoint}))
 	return router, nil
 }

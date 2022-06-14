@@ -11,6 +11,8 @@ import (
 	"net/http"
 )
 
+const healthEndpoint = "/healthz"
+
 type credentials struct {
 	Login    string `json:"login"`
 	Password string `json:"password"`
@@ -52,7 +54,7 @@ func getRoutes() []route {
 		{
 			"health",
 			http.MethodGet,
-			"/healthz",
+			healthEndpoint,
 			healthCheckHandler,
 		},
 	}
@@ -122,6 +124,6 @@ func NewHTTPHandler(userService *service.UserService, sessionService *auth.Sessi
 			HandlerFunc(getHandlerFunc(userService, sessionService, route.Handler))
 	}
 
-	router.Use(transport.NewLoggingMiddleware(logger))
+	router.Use(transport.NewLoggingMiddleware(logger, []string{healthEndpoint}))
 	return router, nil
 }

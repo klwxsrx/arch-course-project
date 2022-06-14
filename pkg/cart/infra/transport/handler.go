@@ -11,6 +11,8 @@ import (
 	"net/http"
 )
 
+const healthEndpoint = "/healthz"
+
 type route struct {
 	Name    string
 	Method  string
@@ -47,7 +49,7 @@ func getRoutes() []route {
 		{
 			"health",
 			http.MethodGet,
-			"/healthz",
+			healthEndpoint,
 			healthCheckHandler,
 		},
 	}
@@ -200,6 +202,6 @@ func NewHTTPHandler(cartService *service.CartService, logger log.Logger) (http.H
 			HandlerFunc(getHandlerFunc(cartService, route.Handler))
 	}
 
-	router.Use(transport.NewLoggingMiddleware(logger))
+	router.Use(transport.NewLoggingMiddleware(logger, []string{healthEndpoint}))
 	return router, nil
 }

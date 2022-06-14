@@ -20,9 +20,23 @@ func newLoggingResponseWriter(w http.ResponseWriter) *loggingResponseWriter {
 	return &loggingResponseWriter{w, http.StatusOK}
 }
 
-func NewLoggingMiddleware(l log.Logger) func(next http.Handler) http.Handler {
+func NewLoggingMiddleware(l log.Logger, excludedURIs []string) func(next http.Handler) http.Handler {
+	isExcluded := func(uri string) bool {
+		for _, excluded := range excludedURIs {
+			if uri == excluded {
+				return true
+			}
+		}
+		return false
+	}
+
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if isExcluded(r.RequestURI) {
+				next.ServeHTTP(w, r)
+				return
+			}
+
 			lrw := newLoggingResponseWriter(w)
 			next.ServeHTTP(lrw, r)
 
